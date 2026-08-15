@@ -20,6 +20,8 @@ Each word tracks right/wrong/streak. A correct answer pushes its next review out
 
 ## Adding words
 
+The word bank is personal — it only contains words the owner has actually learned, and grows day by day.
+
 Everything lives in `index.html`. Add an object to `WORDS`:
 
 ```js
