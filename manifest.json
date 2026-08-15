@@ -1,0 +1,14 @@
+{
+  "name": "Thai Vocab",
+  "short_name": "Thai Vocab",
+  "description": "Learn Thai vocabulary by typing answers — recall, listening, sentence building, tones and progress.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#10262B",
+  "theme_color": "#10262B",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

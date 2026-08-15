@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#10262B" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Thai Vocab" />
+<meta name="description" content="Learn Thai vocabulary by typing answers — typed recall, listening, sentence building, tone drills and progress tracking." />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<title>Thai Vocab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10262B; --surface:#16343A; --surface2:#1D424A; --surface3:#245059;
+    --gold:#E7B24C; --cream:#EFE9DA; --muted:#7FA0A0;
+    --jade:#5FB38A; --clay:#E07856; --line:rgba(239,233,218,.12);
+    --nav-h:64px;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{height:100%;-webkit-text-size-adjust:100%}
+  body{background:var(--ink);color:var(--cream);font-family:'Inter',system-ui,sans-serif;
+    min-height:100dvh;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none;
+    padding:calc(14px + env(safe-area-inset-top)) 14px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom))}
+  button{font-family:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  input,select{font-family:inherit}
+  .wrap{max-width:560px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:24px;letter-spacing:-.02em}
+  h1 span{color:var(--gold)}
+  .stat{font-size:12.5px;color:var(--muted);text-align:right;line-height:1.5}
+  .stat b{color:var(--cream);font-weight:600}
+  .stat .fire{color:var(--gold)}
+
+  /* bottom nav */
+  .nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(16,38,43,.92);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));display:flex;justify-content:center}
+  .nav-inner{display:flex;width:100%;max-width:560px;gap:2px}
+  .nav button{flex:1;border:0;background:transparent;color:var(--muted);font-size:10.5px;font-weight:600;
+    padding:6px 2px;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;transition:.15s}
+  .nav button .ic{font-size:20px;line-height:1}
+  .nav button.active{color:var(--gold);background:rgba(231,178,76,.1)}
+
+  /* chips */
+  .chips{display:flex;gap:7px;overflow-x:auto;padding-bottom:9px;margin-bottom:2px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;border:1px solid var(--line);background:transparent;color:var(--muted);
+    font-size:12.5px;font-weight:600;padding:8px 13px;border-radius:20px;cursor:pointer;transition:.15s;min-height:34px}
+  .chip.active{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+  .chip.jade.active{background:var(--jade);border-color:var(--jade)}
+  .chip.clay.active{background:var(--clay);border-color:var(--clay);color:#fff}
+  .seg{display:flex;gap:4px;background:var(--surface);border-radius:13px;padding:4px;margin-bottom:12px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;
+    padding:9px 4px;border-radius:10px;cursor:pointer;transition:.15s;min-height:40px}
+  .seg button.active{background:var(--surface2);color:var(--cream)}
+
+  /* cards */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px 18px;margin-top:6px;text-align:center}
+  .prompt{font-family:'Bricolage Grotesque',sans-serif;font-weight:600;font-size:26px;letter-spacing:-.01em;line-height:1.2;overflow-wrap:anywhere}
+  .prompt.th{font-family:'Noto Sans Thai',sans-serif;font-size:44px;font-weight:500}
+  .sub{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .thai{font-family:'Noto Sans Thai',sans-serif;font-weight:500;font-size:38px;line-height:1.3}
+  .rom{font-size:18px;color:var(--gold);font-weight:500}
+  .tone{font-size:12px;color:var(--muted)}
+  .row{display:flex;gap:10px;margin-top:16px}
+  .btn{flex:1;border:0;font-size:15px;font-weight:600;padding:14px;border-radius:13px;cursor:pointer;transition:.15s;min-height:48px}
+  .btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .ghost{background:var(--surface2);color:var(--cream)}
+  .gold{background:var(--gold);color:var(--ink)}
+  .got{background:rgba(95,179,138,.18);color:#bfe8d4;border:1px solid var(--jade)}
+  .miss{background:rgba(224,120,86,.16);color:#f2c3b1;border:1px solid var(--clay)}
+  .listen{background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:12px;
+    padding:8px 16px;font-size:18px;cursor:pointer;min-height:48px;min-width:56px}
+  .listen.big{font-size:34px;padding:16px 26px;border-radius:18px;margin:10px auto 0}
+
+  /* typed answer */
+  .field{margin-top:18px;display:flex;gap:8px}
+  .field input{flex:1;background:var(--ink);border:1.5px solid var(--line);color:var(--cream);font-size:18px;
+    padding:13px 14px;border-radius:13px;outline:none;min-width:0;text-align:center}
+  .field input:focus{border-color:var(--gold)}
+  .field input.ok{border-color:var(--jade);background:rgba(95,179,138,.08)}
+  .field input.bad{border-color:var(--clay);background:rgba(224,120,86,.08)}
+  .field input::placeholder{color:rgba(127,160,160,.6)}
+  .verdict{margin-top:14px;padding:14px;border-radius:14px;text-align:center;line-height:1.5}
+  .verdict.ok{background:rgba(95,179,138,.12);border:1px solid rgba(95,179,138,.4)}
+  .verdict.close{background:rgba(231,178,76,.1);border:1px solid rgba(231,178,76,.4)}
+  .verdict.bad{background:rgba(224,120,86,.1);border:1px solid rgba(224,120,86,.4)}
+  .verdict h3{font-size:14px;font-weight:700;margin-bottom:6px;letter-spacing:.02em;text-transform:uppercase}
+  .verdict.ok h3{color:#bfe8d4}.verdict.close h3{color:var(--gold)}.verdict.bad h3{color:#f2c3b1}
+  .verdict .thai{font-size:34px}
+  .verdict .rom{font-size:17px}
+  .verdict .note{font-size:12.5px;color:var(--muted);margin-top:4px}
+  .hintline{margin-top:10px;font-size:13px;color:var(--muted);min-height:18px}
+  .link{background:transparent;border:0;color:var(--muted);text-decoration:underline;font-size:12.5px;cursor:pointer;padding:6px 8px}
+
+  /* progress bar */
+  .bar{height:6px;background:var(--surface2);border-radius:6px;overflow:hidden;margin:4px 0 12px}
+  .bar i{display:block;height:100%;background:var(--gold);border-radius:6px;transition:width .3s}
+  .bar.jade i{background:var(--jade)}
+  .barlabel{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+
+  /* lists */
+  .list{margin-top:6px;display:flex;flex-direction:column;gap:8px}
+  .item{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:12px 14px;
+    display:flex;align-items:center;gap:12px;cursor:pointer}
+  .item .en{flex:1;font-size:14px;min-width:0}
+  .item .en small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+  .item .thai{font-family:'Noto Sans Thai',sans-serif;font-size:22px;font-weight:500;line-height:1.2}
+  .item .rom{font-size:13px;color:var(--gold);text-align:right}
+  .item button{background:transparent;border:0;color:var(--gold);font-size:18px;cursor:pointer;padding:6px;min-width:36px}
+  .badge{font-size:10.5px;padding:3px 7px;border-radius:10px;font-weight:600;white-space:nowrap}
+  .b-weak{background:rgba(224,120,86,.16);color:#f2c3b1}
+  .b-solid{background:rgba(95,179,138,.16);color:#bfe8d4}
+  .b-new{background:rgba(231,178,76,.14);color:var(--gold)}
+  .b-learn{background:rgba(127,160,160,.18);color:var(--muted)}
+  .search{width:100%;background:var(--surface);border:1px solid var(--line);color:var(--cream);font-size:16px;
+    padding:12px 14px;border-radius:13px;outline:none;margin-bottom:10px}
+  .search:focus{border-color:var(--gold)}
+
+  /* flashcard */
+  .flash{perspective:1200px;margin-top:6px}
+  .flash .inner{position:relative;min-height:260px;transition:transform .45s;transform-style:preserve-3d;cursor:pointer}
+  .flash.flipped .inner{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--surface);
+    border:1px solid var(--line);border-radius:20px;padding:24px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center}
+  .face.back{transform:rotateY(180deg);background:var(--surface2)}
+  .face .tag{position:absolute;top:12px;left:14px;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+  .face .cnt{position:absolute;top:12px;right:14px;font-size:11px;color:var(--muted)}
+
+  /* sentence builder */
+  .slot{min-height:76px;background:var(--ink);border:1.5px dashed var(--line);border-radius:14px;padding:10px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin-top:16px}
+  .slot.ok{border-color:var(--jade);border-style:solid}
+  .slot.bad{border-color:var(--clay);border-style:solid}
+  .slot .ph{color:var(--muted);font-size:13px}
+  .tiles{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px;min-height:56px}
+  .tile{background:var(--surface2);border:1px solid var(--line);color:var(--cream);border-radius:12px;padding:8px 12px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:1px;min-height:48px;transition:.12s}
+  .tile:active{transform:scale(.97)}
+  .tile .t{font-family:'Noto Sans Thai',sans-serif;font-size:22px;line-height:1.2}
+  .tile .r{font-size:11px;color:var(--gold)}
+  .tile.used{opacity:.25;pointer-events:none}
+  .gloss{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+  .gloss span{font-size:11.5px;color:var(--muted);background:var(--ink);padding:4px 8px;border-radius:8px}
+  .gloss span b{color:var(--cream);font-weight:500;font-family:'Noto Sans Thai',sans-serif;font-size:14px}
+
+  /* tones */
+  .tonegrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+  .tonebtn{background:var(--surface2);border:1px solid var(--line);color:var(--cream);border-radius:13px;padding:14px 8px;cursor:pointer;font-size:14px;font-weight:600;min-height:56px;transition:.15s}
+  .tonebtn:last-child:nth-child(odd){grid-column:span 2}
+  .tonebtn small{display:block;color:var(--muted);font-weight:500;font-size:11.5px;margin-top:2px}
+  .tonebtn.ok{border-color:var(--jade);background:rgba(95,179,138,.18)}
+  .tonebtn.bad{border-color:var(--clay);background:rgba(224,120,86,.16)}
+  .tonebtn:disabled{cursor:default}
+  .toneref{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 14px}
+  .toneref summary{cursor:pointer;font-size:13.5px;font-weight:600;padding:8px 0;list-style:none;display:flex;justify-content:space-between}
+  .toneref summary::after{content:"+";color:var(--muted)}
+  .toneref[open] summary::after{content:"–"}
+  .toneref table{width:100%;border-collapse:collapse;font-size:13px;margin:4px 0 10px}
+  .toneref td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:top}
+  .toneref td:first-child{font-weight:600;white-space:nowrap}
+  .toneref td .thai{font-size:20px}
+  .toneref .mark{color:var(--gold);font-size:18px}
+  .toneref p{font-size:12.5px;color:var(--muted);line-height:1.6;padding-bottom:10px}
+
+  /* progress */
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 10px;text-align:center}
+  .kpi b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:700;line-height:1.1}
+  .kpi span{font-size:11px;color:var(--muted)}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:10px}
+  .panel h2{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;overflow-x:auto}
+  .heat i{width:100%;aspect-ratio:1;min-width:10px;border-radius:3px;background:var(--surface2)}
+  .heat i.l1{background:rgba(231,178,76,.35)}.heat i.l2{background:rgba(231,178,76,.6)}.heat i.l3{background:var(--gold)}
+  .heat i.today{outline:1.5px solid var(--cream)}
+  .mrow{display:flex;align-items:center;gap:10px;font-size:13px;padding:5px 0}
+  .mrow .n{width:82px;color:var(--cream);font-weight:500}
+  .mrow .stack{flex:1;height:8px;background:var(--surface2);border-radius:6px;overflow:hidden;display:flex}
+  .mrow .stack i{display:block;height:100%}
+  .mrow .stack .s{background:var(--jade)}.mrow .stack .l{background:var(--gold)}.mrow .stack .w{background:var(--clay)}
+  .mrow .c{width:44px;text-align:right;color:var(--muted);font-size:12px}
+  .legend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-top:8px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+  .setrow:first-of-type{border-top:0}
+  .setrow input[type=range]{width:130px;accent-color:var(--gold)}
+  .setrow select{background:var(--surface2);color:var(--cream);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:14px}
+  .toggle{width:46px;height:26px;border-radius:13px;background:var(--surface3);border:0;position:relative;cursor:pointer;transition:.2s}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:.2s}
+  .toggle.on{background:var(--jade)}.toggle.on::after{left:23px;background:#fff}
+  .small{background:var(--surface2);color:var(--cream);border:0;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;min-height:38px}
+  .small.danger{background:rgba(224,120,86,.16);color:#f2c3b1;border:1px solid var(--clay)}
+  textarea.io{width:100%;background:var(--ink);color:var(--cream);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;font-family:ui-monospace,monospace;min-height:80px;margin-top:8px}
+
+  .empty{text-align:center;color:var(--muted);font-size:14px;padding:40px 20px;line-height:1.6}
+  .foot{text-align:center;font-size:11px;color:var(--muted);margin-top:18px;line-height:1.7}
+  .warn{background:rgba(224,120,86,.12);border:1px solid rgba(224,120,86,.3);color:#f2c3b1;
+    font-size:12px;padding:9px 12px;border-radius:11px;margin-top:12px;display:none}
+  .toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 18px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+    background:var(--cream);color:var(--ink);font-size:13px;font-weight:600;padding:10px 16px;border-radius:12px;opacity:0;transition:.25s;pointer-events:none;z-index:30;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .summary{text-align:center;padding:10px 0}
+  .summary .big{font-family:'Bricolage Grotesque',sans-serif;font-size:48px;font-weight:700;color:var(--gold);line-height:1}
+  .summary p{color:var(--muted);font-size:14px;margin-top:6px;line-height:1.5}
+  @keyframes pop{0%{transform:scale(.96);opacity:.6}100%{transform:scale(1);opacity:1}}
+  .pop{animation:pop .18s ease-out}
+  @media (max-width:360px){ .prompt{font-size:22px} .prompt.th{font-size:38px} .thai{font-size:32px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Thai<span>·</span>Vocab</h1>
+    <div class="stat" id="stat"></div>
+  </header>
+
+  <div id="stage"></div>
+
+  <div class="warn" id="warn">No Thai voice on this device — 🔊 needs a Thai voice installed (iOS: Settings → Accessibility → Spoken Content → Voices → Thai).</div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<nav class="nav"><div class="nav-inner">
+  <button data-mode="practice" class="active"><span class="ic">⌨️</span>Practice</button>
+  <button data-mode="learn"><span class="ic">🃏</span>Learn</button>
+  <button data-mode="build"><span class="ic">🧩</span>Build</button>
+  <button data-mode="tones"><span class="ic">🎵</span>Tones</button>
+  <button data-mode="progress"><span class="ic">📈</span>Progress</button>
+</div></nav>
+<div class="toast" id="toast"></div>
+
+<script>
+// =====================================================================
+//  WORD BANK  (progress is keyed by id, so the bank can grow safely)
+// =====================================================================
+const WORDS = [
+  // Day 1
+  {id:"phom",th:"ผม",rom:"phǒm",en:"I / me (men)",tone:"rising",day:1,cat:"People"},
+  {id:"khun",th:"คุณ",rom:"khun",en:"you",tone:"mid",day:1,cat:"People"},
+  {id:"khao_he",th:"เขา",rom:"khǎo",en:"he / she",tone:"rising",day:1,cat:"People"},
+  {id:"rao",th:"เรา",rom:"rao",en:"we",tone:"mid",day:1,cat:"People"},
+  {id:"gin",th:"กิน",rom:"gin",en:"eat",tone:"mid",day:1,cat:"Verbs"},
+  {id:"deum",th:"ดื่ม",rom:"dèum",en:"drink",tone:"low",day:1,cat:"Verbs"},
+  {id:"ao",th:"เอา",rom:"ao",en:"want / take",tone:"mid",day:1,cat:"Verbs"},
+  {id:"yaak",th:"อยาก",rom:"yàak",en:"want to (+verb)",tone:"low",day:1,cat:"Verbs"},
+  {id:"bpai",th:"ไป",rom:"bpai",en:"go",tone:"mid",day:1,cat:"Verbs"},
+  {id:"mii",th:"มี",rom:"mii",en:"have",tone:"mid",day:1,cat:"Verbs"},
+  {id:"mai_not",th:"ไม่",rom:"mâi",en:"not / no",tone:"falling",day:1,cat:"Glue"},
+  {id:"mai_q",th:"ไหม",rom:"mǎi",en:"(yes/no question marker)",alt:["question","question marker","question particle","yes no question"],tone:"rising",day:1,cat:"Glue"},
+  // Day 2
+  {id:"khao_rice",th:"ข้าว",rom:"khâao",en:"rice / meal",tone:"falling",day:2,cat:"Things"},
+  {id:"naam",th:"น้ำ",rom:"náam",en:"water",tone:"high",day:2,cat:"Things"},
+  {id:"nii",th:"นี่",rom:"nîi",en:"this / this one",tone:"falling",day:2,cat:"Glue"},
+  {id:"nan",th:"นั่น",rom:"nân",en:"that / that one",tone:"falling",day:2,cat:"Glue"},
+  {id:"chorp",th:"ชอบ",rom:"chôrp",en:"like",tone:"falling",day:2,cat:"Verbs"},
+  {id:"maa",th:"มา",rom:"maa",en:"come",tone:"mid",day:2,cat:"Verbs"},
+  {id:"thii",th:"ที่",rom:"thîi",en:"at / place",tone:"falling",day:2,cat:"Glue"},
+  {id:"thiinai",th:"ที่ไหน",rom:"thîi-nǎi",en:"where",tone:"falling+rising",day:2,cat:"Questions"},
+  {id:"thiinii",th:"ที่นี่",rom:"thîi-nîi",en:"here",tone:"falling+falling",day:2,cat:"Glue"},
+  {id:"thiinan",th:"ที่นั่น",rom:"thîi-nân",en:"there",tone:"falling+falling",day:2,cat:"Glue"},
+  {id:"maak",th:"มาก",rom:"mâak",en:"very / a lot",tone:"falling",day:2,cat:"Glue"},
+  // Day 3
+  {id:"khrap",th:"ครับ",rom:"khráp",en:"polite particle (men)",alt:["polite particle","particle"],tone:"high",day:3,cat:"Polite"},
+  {id:"khopkhun",th:"ขอบคุณ",rom:"khòp-khun",en:"thank you",alt:["thanks"],tone:"low+mid",day:3,cat:"Polite"},
+  {id:"kho",th:"ขอ",rom:"khǒ",en:"may I have / I'd like",alt:["please give","can i have","i would like","request"],tone:"rising",day:3,cat:"Polite"},
+  {id:"thaorai",th:"เท่าไหร่",rom:"thâo-rài",en:"how much?",tone:"falling+low",day:3,cat:"Questions"},
+  {id:"aroi",th:"อร่อย",rom:"à-ròi",en:"delicious",alt:["tasty","yummy"],tone:"low+low",day:3,cat:"Describe"},
+  {id:"phet",th:"เผ็ด",rom:"phèt",en:"spicy",alt:["hot spicy"],tone:"low",day:3,cat:"Describe"},
+  {id:"neung",th:"หนึ่ง",rom:"nèung",en:"one",alt:["1"],tone:"low",day:3,cat:"Numbers"},
+  {id:"sawng",th:"สอง",rom:"sǎwng",en:"two",alt:["2"],tone:"rising",day:3,cat:"Numbers"},
+  // Day 4
+  {id:"saam",th:"สาม",rom:"sǎam",en:"three",alt:["3"],tone:"rising",day:4,cat:"Numbers"},
+  {id:"sii",th:"สี่",rom:"sìi",en:"four",alt:["4"],tone:"low",day:4,cat:"Numbers"},
+  {id:"haa",th:"ห้า",rom:"hâa",en:"five",alt:["5"],tone:"falling",day:4,cat:"Numbers"},
+  {id:"gap",th:"กับ",rom:"gàp",en:"and / with",tone:"low",day:4,cat:"Glue"},
+  {id:"reu",th:"หรือ",rom:"rʉ̌ʉ (reu)",en:"or",tone:"rising",day:4,cat:"Glue"},
+  {id:"dai",th:"ได้",rom:"dâi",en:"can / able to",alt:["able","ok","okay","possible"],tone:"falling",day:4,cat:"Verbs"},
+  {id:"ruu",th:"รู้",rom:"rúu",en:"know",tone:"high",day:4,cat:"Verbs"},
+  {id:"duu",th:"ดู",rom:"duu",en:"see / look",alt:["watch"],tone:"mid",day:4,cat:"Verbs"},
+  // Day 5 — greetings & question words
+  {id:"sawatdii",th:"สวัสดี",rom:"sà-wàt-dii",en:"hello / goodbye",alt:["hi","bye","greetings"],tone:"low+low+mid",day:5,cat:"Greetings"},
+  {id:"sabaaidii",th:"สบายดี",rom:"sà-baai-dii",en:"fine / well (how are you?)",alt:["fine","well","i'm fine","good","how are you"],tone:"low+mid+mid",day:5,cat:"Greetings"},
+  {id:"chai",th:"ใช่",rom:"châi",en:"yes / that's right",alt:["yes","right","correct"],tone:"falling",day:5,cat:"Glue"},
+  {id:"arai",th:"อะไร",rom:"à-rai",en:"what",tone:"low+mid",day:5,cat:"Questions"},
+  {id:"khrai",th:"ใคร",rom:"khrai",en:"who",tone:"mid",day:5,cat:"Questions"},
+  {id:"thammai",th:"ทำไม",rom:"tham-mai",en:"why",tone:"mid+mid",day:5,cat:"Questions"},
+  {id:"meuarai",th:"เมื่อไหร่",rom:"mʉ̂a-rài",en:"when",tone:"falling+low",day:5,cat:"Questions"},
+  {id:"yangngai",th:"ยังไง",rom:"yang-ngai",en:"how (in what way)",alt:["how"],tone:"mid+mid",day:5,cat:"Questions"},
+  {id:"dii",th:"ดี",rom:"dii",en:"good",alt:["nice","well"],tone:"mid",day:5,cat:"Describe"},
+  {id:"cheu",th:"ชื่อ",rom:"chʉ̂ʉ (cheu)",en:"name / to be called",alt:["name","named","called"],tone:"falling",day:5,cat:"People"},
+  // Day 6 — food & drink
+  {id:"gaafae",th:"กาแฟ",rom:"gaa-fae",en:"coffee",tone:"mid+mid",day:6,cat:"Food"},
+  {id:"chaa",th:"ชา",rom:"chaa",en:"tea",tone:"mid",day:6,cat:"Food"},
+  {id:"nom",th:"นม",rom:"nom",en:"milk",tone:"mid",day:6,cat:"Food"},
+  {id:"waan",th:"หวาน",rom:"wǎan",en:"sweet",tone:"rising",day:6,cat:"Describe"},
+  {id:"rorn",th:"ร้อน",rom:"rórn",en:"hot (temperature)",alt:["hot"],tone:"high",day:6,cat:"Describe"},
+  {id:"yen",th:"เย็น",rom:"yen",en:"cold / cool (things, weather)",alt:["cold","cool","chilled","iced"],tone:"mid",day:6,cat:"Describe"},
+  {id:"hiw",th:"หิว",rom:"hǐw",en:"hungry",tone:"rising",day:6,cat:"Describe"},
+  {id:"im",th:"อิ่ม",rom:"ìm",en:"full (after eating)",alt:["full"],tone:"low",day:6,cat:"Describe"},
+  {id:"chekbin",th:"เช็คบิล",rom:"chék-bin",en:"the bill / check, please",alt:["bill","check","the bill","the check","bill please","check please"],tone:"high+mid",day:6,cat:"Food"},
+  {id:"duai",th:"ด้วย",rom:"dûai",en:"too / also (softens requests)",alt:["too","also","as well","please"],tone:"falling",day:6,cat:"Glue"},
+  // Day 7 — places & getting around
+  {id:"baan",th:"บ้าน",rom:"bâan",en:"home / house",tone:"falling",day:7,cat:"Places"},
+  {id:"hongnaam",th:"ห้องน้ำ",rom:"hông-náam",en:"toilet / bathroom",alt:["restroom","wc","toilet","bathroom"],tone:"falling+high",day:7,cat:"Places"},
+  {id:"yuu",th:"อยู่",rom:"yùu",en:"to be (located) / stay",alt:["be located","is at","located","stay","live","be"],tone:"low",day:7,cat:"Verbs"},
+  {id:"glap",th:"กลับ",rom:"glàp",en:"go back / return",alt:["return","go back","come back","back"],tone:"low",day:7,cat:"Verbs"},
+  {id:"rot",th:"รถ",rom:"rót",en:"car / vehicle",alt:["car","vehicle"],tone:"high",day:7,cat:"Places"},
+  {id:"talaat",th:"ตลาด",rom:"ta-làat",en:"market",tone:"low+low",day:7,cat:"Places"},
+  {id:"raan",th:"ร้าน",rom:"ráan",en:"shop / store",alt:["shop","store","restaurant"],tone:"high",day:7,cat:"Places"},
+  {id:"roongraem",th:"โรงแรม",rom:"roong-raem",en:"hotel",tone:"mid+mid",day:7,cat:"Places"},
+  {id:"glai",th:"ไกล",rom:"glai",en:"far",tone:"mid",day:7,cat:"Describe"},
+  {id:"glai_near",th:"ใกล้",rom:"glâi",en:"near / close",alt:["near","close","nearby"],tone:"falling",day:7,cat:"Describe"},
+  // Day 8 — talking, time, more numbers
+  {id:"phuut",th:"พูด",rom:"phûut",en:"speak / talk",alt:["speak","talk","say"],tone:"falling",day:8,cat:"Verbs"},
+  {id:"phaasaathai",th:"ภาษาไทย",rom:"phaa-sǎa-thai",en:"Thai language",alt:["thai","thai language"],tone:"mid+rising+mid",day:8,cat:"Things"},
+  {id:"khaojai",th:"เข้าใจ",rom:"khâo-jai",en:"understand",tone:"falling+mid",day:8,cat:"Verbs"},
+  {id:"nitnoi",th:"นิดหน่อย",rom:"nít-nòi",en:"a little / a bit",alt:["a little","a bit","little","bit","a little bit"],tone:"high+low",day:8,cat:"Glue"},
+  {id:"chaa_slow",th:"ช้า",rom:"cháa",en:"slow / slowly",alt:["slow","slowly"],tone:"high",day:8,cat:"Describe"},
+  {id:"reo",th:"เร็ว",rom:"reo",en:"fast / quick",alt:["fast","quick","quickly"],tone:"mid",day:8,cat:"Describe"},
+  {id:"iik",th:"อีก",rom:"ìik",en:"again / more",alt:["again","more","another"],tone:"low",day:8,cat:"Glue"},
+  {id:"wannii",th:"วันนี้",rom:"wan-níi",en:"today",tone:"mid+high",day:8,cat:"Time"},
+  {id:"phrungnii",th:"พรุ่งนี้",rom:"phrûng-níi",en:"tomorrow",tone:"falling+high",day:8,cat:"Time"},
+  {id:"hok",th:"หก",rom:"hòk",en:"six",alt:["6"],tone:"low",day:8,cat:"Numbers"},
+  {id:"jet",th:"เจ็ด",rom:"jèt",en:"seven",alt:["7"],tone:"low",day:8,cat:"Numbers"},
+  {id:"bpaet",th:"แปด",rom:"bpàet",en:"eight",alt:["8"],tone:"low",day:8,cat:"Numbers"},
+  {id:"gao",th:"เก้า",rom:"gâo",en:"nine",alt:["9"],tone:"falling",day:8,cat:"Numbers"},
+  {id:"sip",th:"สิบ",rom:"sìp",en:"ten",alt:["10"],tone:"low",day:8,cat:"Numbers"},
+];
+const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
+
+// Sentences for the Build tab: English + ordered word ids (all from the bank).
+const SENTENCES = [
+  {en:"I want to eat rice.",ids:["phom","yaak","gin","khao_rice"]},
+  {en:"Do you like water?",ids:["khun","chorp","naam","mai_q"]},
+  {en:"This is very delicious.",ids:["nii","aroi","maak"]},
+  {en:"I don't eat spicy food.",ids:["phom","mai_not","gin","phet"]},
+  {en:"Where are you going?",ids:["khun","bpai","thiinai"]},
+  {en:"I don't know.",ids:["phom","mai_not","ruu"]},
+  {en:"I like it here a lot.",ids:["phom","chorp","thiinii","maak"]},
+  {en:"Is he coming here?",ids:["khao_he","maa","thiinii","mai_q"]},
+  {en:"Can I drink water?",ids:["phom","deum","naam","dai","mai_q"]},
+  {en:"Thank you very much.",ids:["khopkhun","maak","khrap"]},
+  {en:"How much is this?",ids:["nii","thaorai","khrap"]},
+  {en:"May I have rice, please.",ids:["kho","khao_rice","khrap"]},
+  {en:"We have water and rice.",ids:["rao","mii","naam","gap","khao_rice"]},
+  {en:"Do you want to go?",ids:["khun","yaak","bpai","mai_q"]},
+  {en:"Is that spicy?",ids:["nan","phet","mai_q"]},
+  {en:"I can't go.",ids:["phom","bpai","mai_not","dai"]},
+  {en:"He eats a lot.",ids:["khao_he","gin","maak"]},
+  {en:"Come here!",ids:["maa","thiinii"]},
+  {en:"Do you have coffee?",ids:["khun","mii","gaafae","mai_q"]},
+  {en:"What do you want to eat?",ids:["khun","yaak","gin","arai"]},
+  {en:"Who is that?",ids:["nan","khrai"]},
+  {en:"Why aren't you going?",ids:["thammai","khun","mai_not","bpai"]},
+  {en:"Is it good?",ids:["dii","mai_q"]},
+  {en:"Hello! How are you?",ids:["sawatdii","khrap","sabaaidii","mai_q"]},
+  {en:"I speak a little Thai.",ids:["phom","phuut","phaasaathai","nitnoi"]},
+  {en:"I understand.",ids:["phom","khaojai"]},
+  {en:"I don't understand.",ids:["phom","mai_not","khaojai"]},
+  {en:"Where is the toilet?",ids:["hongnaam","yuu","thiinai"]},
+  {en:"The bill, please.",ids:["chekbin","duai","khrap"]},
+  {en:"It's very hot today.",ids:["wannii","rorn","maak"]},
+  {en:"What is this?",ids:["nii","arai","khrap"]},
+  {en:"Not spicy, please.",ids:["mai_not","phet","khrap"]},
+  {en:"I'm going home.",ids:["phom","glap","baan"]},
+  {en:"Is the hotel far?",ids:["roongraem","glai","mai_q"]},
+  {en:"The market is near here.",ids:["talaat","yuu","glai_near","thiinii"]},
+  {en:"Please speak slowly.",ids:["phuut","chaa_slow","duai","khrap"]},
+  {en:"Say it again, please.",ids:["phuut","iik","duai","khrap"]},
+  {en:"I'm hungry.",ids:["phom","hiw"]},
+  {en:"Are you full?",ids:["khun","im","mai_q"]},
+  {en:"Do you understand?",ids:["khun","khaojai","mai_q"]},
+  {en:"Do you know him?",ids:["khun","ruu","mai_q"]},
+  {en:"Coffee or tea?",ids:["gaafae","reu","chaa"]},
+  {en:"Come back tomorrow.",ids:["phrungnii","glap","maa"]},
+];
+
+const TONES = [
+  {key:"mid",label:"Mid",mark:"a",desc:"Flat, level voice — like a plain statement."},
+  {key:"low",label:"Low",mark:"à",desc:"Starts low and stays low."},
+  {key:"falling",label:"Falling",mark:"â",desc:"Starts high, drops down — like an emphatic 'no!'."},
+  {key:"high",label:"High",mark:"á",desc:"Starts high and rises slightly / stays high, tense."},
+  {key:"rising",label:"Rising",mark:"ǎ",desc:"Starts low, then rises — like a question 'huh?'."},
+];
+
+// =====================================================================
+//  STATE & STORAGE
+// =====================================================================
+const KEY="thai-vocab-v2";
+const DEFAULT_SETTINGS={rate:0.8,autoplay:true,goal:20,distractor:true};
+let S={stats:{},activity:{},sent:{},settings:{...DEFAULT_SETTINGS}};
+function load(){ try{const r=localStorage.getItem(KEY); if(r){const j=JSON.parse(r); S={...S,...j,settings:{...DEFAULT_SETTINGS,...(j.settings||{})}};}}catch(e){} }
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} }
+function st(id){ return S.stats[id]||{right:0,wrong:0,seen:0,streak:0,due:0,last:0}; }
+const todayKey=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+function logActivity(){ const k=todayKey(); S.activity[k]=(S.activity[k]||0)+1; }
+const INTERVALS=[0,1,3,7,14,30,60]; // days between reviews by streak
+function record(id,ok){
+  const s=st(id); s.seen++; s.last=Date.now();
+  if(ok){ s.right++; s.streak=(s.streak||0)+1; s.due=Date.now()+INTERVALS[Math.min(s.streak,INTERVALS.length-1)]*864e5; }
+  else { s.wrong++; s.streak=0; s.due=Date.now(); }
+  S.stats[id]=s; logActivity(); save();
+}
+function known(id){ const s=st(id); return s.right>=3 && s.streak>=2; }
+function isWeak(id){ const s=st(id); return s.wrong>0 && !known(id); }
+function isDue(id){ const s=st(id); return s.seen>0 && (s.due||0)<=Date.now(); }
+function todayCount(){ return S.activity[todayKey()]||0; }
+function streakDays(){
+  let n=0; const d=new Date(); const k=todayKey();
+  if(!S.activity[k]) d.setDate(d.getDate()-1); // streak still alive if you practised yesterday
+  for(;;){ const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if(S.activity[key]) { n++; d.setDate(d.getDate()-1); } else break; if(n>3650) break; }
+  return n;
+}
+
+// =====================================================================
+//  TTS
+// =====================================================================
+let voices=[]; function loadVoices(){ voices=window.speechSynthesis? speechSynthesis.getVoices():[]; }
+loadVoices(); if(window.speechSynthesis && speechSynthesis.onvoiceschanged!==undefined) speechSynthesis.onvoiceschanged=loadVoices;
+function thaiVoice(){ loadVoices(); return voices.find(v=>/^th([-_]|$)/i.test(v.lang)); }
+function hasThaiVoice(){ return !!thaiVoice(); }
+function speak(t){
+  if(!('speechSynthesis' in window)){ document.getElementById('warn').style.display='block'; return; }
+  const th=thaiVoice(); if(!th) document.getElementById('warn').style.display='block';
+  const u=new SpeechSynthesisUtterance(t); u.lang="th-TH"; u.rate=S.settings.rate; if(th)u.voice=th;
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+
+// =====================================================================
+//  ANSWER MATCHING (lenient romanisation)
+// =====================================================================
+function skeleton(s){
+  s=(s||"").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  s=s.replace(/ʉ/g,'ue').replace(/ɛ/g,'ae').replace(/ɔ/g,'o').replace(/ə/g,'oe').replace(/œ/g,'oe');
+  s=s.replace(/[^a-z]/g,'');
+  s=s.replace(/kh/g,'k').replace(/ph/g,'p').replace(/th/g,'t').replace(/bp/g,'p').replace(/dt/g,'t').replace(/ch/g,'c').replace(/ck/g,'k').replace(/j/g,'c');
+  s=s.replace(/g/g,'k').replace(/b/g,'p').replace(/d/g,'t');
+  s=s.replace(/ar(?![aeiou])/g,'a').replace(/or(?![aeiou])/g,'o').replace(/er(?![aeiou])/g,'e').replace(/aw(?![aeiou])/g,'o').replace(/oe/g,'e')
+     .replace(/eu/g,'u').replace(/ue/g,'u').replace(/ow/g,'ao').replace(/au/g,'ao').replace(/ay/g,'ai').replace(/ee/g,'i').replace(/oo/g,'u');
+  s=s.replace(/(.)\1+/g,'$1');
+  return s;
+}
+function lev(a,b){
+  const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
+  let prev=Array.from({length:n+1},(_,i)=>i);
+  for(let i=1;i<=m;i++){ const cur=[i]; for(let j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); } prev=cur; }
+  return prev[n];
+}
+function romAlts(w){ // "rʉ̌ʉ (reu)" -> ["rʉ̌ʉ","reu"]
+  return w.rom.split(/[()/]/).map(x=>x.trim()).filter(Boolean);
+}
+// returns "ok" | "close" | "bad"
+function checkThai(w,input){
+  const raw=(input||"").trim(); if(!raw) return "bad";
+  if(raw.normalize('NFC')===w.th.normalize('NFC')) return "ok";
+  const typed=skeleton(raw); if(!typed) return "bad";
+  const targets=[...romAlts(w),w.rom].map(skeleton);
+  if(targets.includes(typed)) return "ok";
+  if(targets.some(t=>t.length>=4 && lev(t,typed)<=1)) return "close";
+  return "bad";
+}
+function normEn(s){ return (s||"").toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9' ]+/g,' ').replace(/\b(to|the|a|an)\b/g,' ').replace(/\s+/g,' ').trim(); }
+function enAlts(w){
+  const out=new Set();
+  let base=w.en.replace(/\([^)]*\)/g,'').trim();
+  if(!base) base=w.en.replace(/[()]/g,'');
+  base.split('/').forEach(p=>{ const n=normEn(p); if(n) out.add(n); });
+  (w.alt||[]).forEach(a=>{ const n=normEn(a); if(n) out.add(n); });
+  return [...out];
+}
+function checkEn(w,input){
+  const t=normEn(input); if(!t) return "bad";
+  const alts=enAlts(w);
+  if(alts.includes(t)) return "ok";
+  const tw=t.split(' ');
+  // typed words are a subset of an alternative's words (e.g. "want" for "want to")
+  if(alts.some(a=>{ const aw=a.split(' '); return tw.every(x=>aw.includes(x)); })) return "ok";
+  if(alts.some(a=>a.length>=4 && lev(a,t)<=1)) return "close";
+  return "bad";
+}
+
+// =====================================================================
+//  APP STATE
+// =====================================================================
+let mode="practice";
+let P={sub:"type",filter:"All",cur:null,phase:"ask",verdict:null,hint:0,session:{n:0,right:0},done:false};
+let L={view:"cards",day:"All",q:"",idx:0,flipped:false};
+let B={cur:null,order:[],picked:[],phase:"ask",tiles:[],right:0,n:0};
+let T={cur:null,phase:"ask",pick:null,right:0,n:0};
+const $=id=>document.getElementById(id);
+const stage=()=>$('stage');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1600); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const CATS=()=>[...new Set(WORDS.map(w=>w.cat))];
+const DAYS=()=>[...new Set(WORDS.map(w=>w.day))].sort((a,b)=>a-b);
+
+function renderStat(){
+  const total=WORDS.length,k=WORDS.filter(w=>known(w.id)).length, sd=streakDays();
+  $('stat').innerHTML=`<span class="fire">🔥 ${sd}</span> day${sd===1?'':'s'} · <b>${k}</b>/${total} solid`;
+}
+
+// ---------------------------------------------------------------------
+//  PRACTICE (typed recall)
+// ---------------------------------------------------------------------
+function practicePool(){
+  if(P.filter==="Due") return WORDS.filter(w=>isDue(w.id));
+  if(P.filter==="Weak") return WORDS.filter(w=>isWeak(w.id));
+  if(P.filter==="New") return WORDS.filter(w=>st(w.id).seen===0);
+  if(P.filter==="All") return WORDS;
+  return WORDS.filter(w=>w.cat===P.filter);
+}
+function priority(w){
+  const s=st(w.id); let p=Math.random()*2;
+  if(s.seen===0) p+=4;                          // new words come early
+  if(s.seen>0 && (s.due||0)<=Date.now()) p+=6;  // due for review
+  p+=s.wrong*2 - s.streak;                      // weak words rise, solid words sink
+  if(s.last && Date.now()-s.last<60e3) p-=8;    // avoid immediate repeats
+  return p;
+}
+function pickNext(){ const p=practicePool(); if(!p.length) return null; return p.slice().sort((a,b)=>priority(b)-priority(a))[0]; }
+
+function renderPractice(){
+  const goal=S.settings.goal, tc=todayCount();
+  const listenOk = P.sub!=="listen" || hasThaiVoice() || !window.speechSynthesis;
+  const filters=["All","Due","Weak","New",...CATS()];
+  const cnt=f=>{ const old=P.filter; P.filter=f; const n=practicePool().length; P.filter=old; return n; };
+  let html=`
+    <div class="seg" id="subseg">
+      <button data-sub="type" class="${P.sub==='type'?'active':''}">EN → Thai</button>
+      <button data-sub="listen" class="${P.sub==='listen'?'active':''}">Listen 🔊</button>
+      <button data-sub="read" class="${P.sub==='read'?'active':''}">Thai → EN</button>
+    </div>
+    <div class="chips" id="chips">${filters.map(f=>{
+      const n=cnt(f); const cls=f==="Weak"?"clay":f==="Due"?"jade":"";
+      return `<button class="chip ${cls} ${f===P.filter?'active':''}" data-f="${f}">${f}${["Due","Weak","New"].includes(f)?` ${n}`:''}</button>`; }).join('')}</div>
+    <div class="barlabel"><span>Today ${Math.min(tc,goal)}/${goal}${tc>=goal?' ✓ goal reached':''}</span><span>Session ${P.session.right}/${P.session.n}</span></div>
+    <div class="bar ${tc>=goal?'jade':''}"><i style="width:${Math.min(100,tc/goal*100)}%"></i></div>`;
+
+  if(!P.cur) P.cur=pickNext();
+  if(!P.cur){
+    html+=`<div class="empty">${P.filter==="Due"?"Nothing due right now 🎉<br>Come back later or practise another set.":P.filter==="Weak"?"No weak words 🎉<br>Words you miss will show up here.":P.filter==="New"?"You've seen every word! Switch to All or Due.":"No words in this set yet."}</div>`;
+    stage().innerHTML=html; bindPractice(); renderStat(); return;
+  }
+  const w=P.cur;
+  const isThaiAnswer = P.sub!=="read";
+  const promptHtml = P.sub==="type" ? `<div class="prompt">${esc(w.en)}</div><div class="sub">Type it in Thai (romanised is fine, e.g. <i>khao</i>) — tones optional</div>`
+    : P.sub==="listen" ? `<button class="listen big" id="play" aria-label="play">🔊</button><div class="sub">Listen, then type what it means (or the Thai word)${listenOk?'':'<br><b>No Thai voice on this device — showing the word instead:</b><br><span class="thai" style="font-size:30px">'+esc(w.th)+'</span>'}</div>`
+    : `<div class="prompt th">${esc(w.th)}</div><div class="sub">Type the meaning in English</div>`;
+
+  html+=`<div class="card pop">${promptHtml}`;
+  if(P.phase==="ask"){
+    html+=`<form class="field" id="ansform" autocomplete="off"><input id="ans" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="${isThaiAnswer?'your answer…':'meaning in English…'}" ${P.sub==='read'?'':'lang="th"'}>
+      <button class="btn gold" type="submit" style="flex:0 0 auto;padding:14px 18px">Check</button></form>
+      <div class="hintline" id="hintline">${hintText(w)}</div>
+      <div class="row" style="margin-top:8px"><button class="link" id="hint">💡 Hint</button><button class="link" id="show">Show answer</button></div>`;
+  } else {
+    const v=P.verdict;
+    html+=`<div class="verdict ${v}">
+        <h3>${v==="ok"?"✓ Correct":v==="close"?"≈ Close enough":"✗ Not quite"}</h3>
+        <div class="thai">${esc(w.th)}</div><div class="rom">${esc(w.rom)}</div>
+        <div class="note">${esc(w.en)} · ${esc(w.tone)} tone${P.typed?` · you typed “${esc(P.typed)}”`:''}</div>
+      </div>
+      <div class="row"><button class="listen" id="say">🔊</button>
+        ${v==="bad"?`<button class="btn got" id="override">I was right</button>`:''}
+        <button class="btn gold" id="next">Next →</button></div>`;
+  }
+  html+=`</div>`;
+  if(P.session.n>0 && P.session.n%goal===0 && P.phase==="ask" && !P.done){
+    P.done=true; toast(`Session: ${P.session.right}/${P.session.n} correct 🎉`);
+  }
+  stage().innerHTML=html;
+  bindPractice();
+  if(P.phase==="ask"){ const inp=$('ans'); if(inp){ inp.focus({preventScroll:true}); } if(P.sub==="listen"&&S.settings.autoplay&&hasThaiVoice()) setTimeout(()=>speak(w.th),150); }
+  else if(P.sub!=="listen" && S.settings.autoplay) speak(w.th);
+  renderStat();
+}
+function hintText(w){
+  if(!P.hint) return "";
+  const alts=romAlts(w); const r=alts[alts.length-1]||w.rom;
+  const syl=r.split(/[- ]/).length;
+  if(P.sub==="read"){ const e=enAlts(w)[0]||""; return P.hint===1?`Starts with “${e[0]||'?'}…” · ${e.length} letters`:`${e.slice(0,Math.ceil(e.length/2))}…`; }
+  return P.hint===1?`${syl} syllable${syl>1?'s':''} · starts with “${r[0]}”`:`${r.slice(0,Math.ceil(r.length/2))}…`;
+}
+function bindPractice(){
+  const seg=$('subseg'); if(seg) seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{ P.sub=b.dataset.sub; P.cur=null; P.phase="ask"; P.hint=0; renderPractice(); });
+  const chips=$('chips'); if(chips) chips.onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; P.filter=b.dataset.f; P.cur=null; P.phase="ask"; P.hint=0; renderPractice(); };
+  const form=$('ansform'); if(form) form.onsubmit=e=>{ e.preventDefault(); submitAnswer($('ans').value); };
+  const play=$('play'); if(play) play.onclick=()=>speak(P.cur.th);
+  const hint=$('hint'); if(hint) hint.onclick=()=>{ P.hint=Math.min(2,P.hint+1); $('hintline').textContent=hintText(P.cur); };
+  const show=$('show'); if(show) show.onclick=()=>{ P.typed=""; finish("bad"); };
+  const say=$('say'); if(say) say.onclick=()=>speak(P.cur.th);
+  const next=$('next'); if(next) next.onclick=()=>{ P.cur=null; P.phase="ask"; P.hint=0; P.done=false; renderPractice(); };
+  const ov=$('override'); if(ov) ov.onclick=()=>{ // undo the wrong mark, count as right
+    const s=st(P.cur.id); s.wrong=Math.max(0,s.wrong-1); s.seen=Math.max(0,s.seen-1); S.stats[P.cur.id]=s;
+    const k=todayKey(); S.activity[k]=Math.max(0,(S.activity[k]||1)-1); P.session.n--;
+    record(P.cur.id,true); P.session.n++; P.session.right++; P.verdict="ok"; renderPractice(); };
+}
+function submitAnswer(val){
+  const w=P.cur; P.typed=val;
+  const v = P.sub==="read" ? checkEn(w,val)
+          : P.sub==="listen" ? (checkEn(w,val)!=="bad"?checkEn(w,val):checkThai(w,val))
+          : checkThai(w,val);
+  finish(v);
+}
+function finish(v){
+  const ok=v!=="bad"; record(P.cur.id,ok); P.session.n++; if(ok) P.session.right++;
+  P.verdict=v; P.phase="done"; renderPractice();
+  if(navigator.vibrate) navigator.vibrate(ok?15:[30,40,30]);
+}
+
+// ---------------------------------------------------------------------
+//  LEARN (flashcards + word list)
+// ---------------------------------------------------------------------
+function learnPool(){
+  let p=L.day==="All"?WORDS:WORDS.filter(w=>w.day===L.day);
+  if(L.q){ const q=L.q.toLowerCase(); p=p.filter(w=>w.en.toLowerCase().includes(q)||w.rom.toLowerCase().includes(q)||w.th.includes(q)||skeleton(w.rom).includes(skeleton(q))||(w.alt||[]).some(a=>a.includes(q))); }
+  return p;
+}
+function badge(w){
+  const s=st(w.id);
+  if(s.seen===0) return `<span class="badge b-new">new</span>`;
+  if(known(w.id)) return `<span class="badge b-solid">solid</span>`;
+  if(s.wrong>0 && s.streak<2) return `<span class="badge b-weak">${s.wrong}✗</span>`;
+  return `<span class="badge b-learn">learning</span>`;
+}
+function renderLearn(){
+  const p=learnPool();
+  let html=`
+    <div class="seg" id="lseg"><button data-v="cards" class="${L.view==='cards'?'active':''}">Flashcards</button><button data-v="list" class="${L.view==='list'?'active':''}">Word list</button></div>
+    <div class="chips" id="dchips"><button class="chip ${L.day==='All'?'active':''}" data-d="All">All ${WORDS.length}</button>${DAYS().map(d=>`<button class="chip ${L.day===d?'active':''}" data-d="${d}">Day ${d}</button>`).join('')}</div>
+    <input class="search" id="q" type="search" placeholder="Search English, romanised or Thai…" value="${esc(L.q)}">`;
+  if(!p.length){ html+=`<div class="empty">Nothing matches.</div>`; stage().innerHTML=html; bindLearn(); return; }
+  if(L.view==="cards"){
+    if(L.idx>=p.length) L.idx=0; const w=p[L.idx];
+    html+=`<div class="flash ${L.flipped?'flipped':''}" id="flash"><div class="inner">
+        <div class="face"><span class="tag">${esc(w.cat)} · day ${w.day}</span><span class="cnt">${L.idx+1}/${p.length}</span>
+          <div class="prompt">${esc(w.en)}</div><div class="sub">tap to flip</div></div>
+        <div class="face back"><span class="tag">${esc(w.tone)} tone</span><span class="cnt">${L.idx+1}/${p.length}</span>
+          <div class="thai">${esc(w.th)}</div><div class="rom">${esc(w.rom)}</div><div class="sub">${esc(w.en)}</div></div>
+      </div></div>
+      <div class="row"><button class="btn ghost" id="prev">‹ Prev</button><button class="listen" id="lsay">🔊</button><button class="btn ghost" id="nxt">Next ›</button></div>
+      <div class="row"><button class="btn gold" id="shuf">Shuffle</button></div>`;
+  } else {
+    html+=`<div class="list">`+p.map(w=>`
+      <div class="item" data-say="${esc(w.th)}">
+        <div class="thai">${esc(w.th)}</div>
+        <div class="en">${esc(w.en)}<small>${esc(w.tone)} · day ${w.day} · ${esc(w.cat)}</small></div>
+        <div class="rom">${esc(w.rom)}</div>${badge(w)}
+        <button aria-label="listen">🔊</button></div>`).join('')+`</div>`;
+  }
+  stage().innerHTML=html; bindLearn(); renderStat();
+}
+function bindLearn(){
+  $('lseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ L.view=b.dataset.v; L.flipped=false; renderLearn(); });
+  $('dchips').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; L.day=b.dataset.d==="All"?"All":+b.dataset.d; L.idx=0; L.flipped=false; renderLearn(); };
+  const q=$('q'); q.oninput=()=>{ L.q=q.value; L.idx=0; const pos=q.selectionStart; renderLearn(); const nq=$('q'); nq.focus(); nq.setSelectionRange(pos,pos); };
+  const p=learnPool();
+  const fl=$('flash'); if(fl){
+    fl.onclick=()=>{ L.flipped=!L.flipped; fl.classList.toggle('flipped',L.flipped); if(L.flipped&&S.settings.autoplay) speak(p[L.idx].th); };
+    $('prev').onclick=()=>{ L.idx=(L.idx-1+p.length)%p.length; L.flipped=false; renderLearn(); };
+    $('nxt').onclick=()=>{ L.idx=(L.idx+1)%p.length; L.flipped=false; renderLearn(); };
+    $('lsay').onclick=()=>speak(p[L.idx].th);
+    $('shuf').onclick=()=>{ L.idx=Math.floor(Math.random()*p.length); L.flipped=false; renderLearn(); };
+    // swipe
+    let sx=0; fl.ontouchstart=e=>sx=e.touches[0].clientX;
+    fl.ontouchend=e=>{ const dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>50){ L.idx=(L.idx+(dx<0?1:-1)+p.length)%p.length; L.flipped=false; renderLearn(); } };
+  }
+  document.querySelectorAll('.item[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say));
+}
+
+// ---------------------------------------------------------------------
+//  BUILD (sentence builder)
+// ---------------------------------------------------------------------
+function sentKey(s){ return s.ids.join('|'); }
+function pickSentence(){
+  const scored=SENTENCES.map((s,i)=>{ const r=S.sent[sentKey(s)]||{ok:0,bad:0}; return {i,p:Math.random()*3+r.bad*2-r.ok*1.5+(B.cur===i?-20:0)}; });
+  scored.sort((a,b)=>b.p-a.p); return scored[0].i;
+}
+function newSentence(){
+  B.cur=pickSentence(); const s=SENTENCES[B.cur];
+  const tiles=s.ids.map((id,k)=>({id,k}));
+  if(S.settings.distractor){ const others=WORDS.filter(w=>!s.ids.includes(w.id)); const d=others[Math.floor(Math.random()*others.length)]; tiles.push({id:d.id,k:-1}); }
+  B.tiles=shuffle(tiles); B.picked=[]; B.phase="ask";
+}
+function renderBuild(){
+  if(B.cur===null) newSentence();
+  const s=SENTENCES[B.cur];
+  const done=B.phase!=="ask";
+  const pickedIds=B.picked.map(t=>t.id);
+  const html=`
+    <div class="barlabel"><span>Sentence builder · tap the tiles in order</span><span>${B.right}/${B.n}</span></div>
+    <div class="bar jade"><i style="width:${B.n?B.right/B.n*100:0}%"></i></div>
+    <div class="card pop">
+      <div class="prompt">${esc(s.en)}</div>
+      <div class="slot ${done?(B.ok?'ok':'bad'):''}" id="slot">${B.picked.length?B.picked.map((t,i)=>`<button class="tile" data-i="${i}"><span class="t">${esc(BY_ID[t.id].th)}</span><span class="r">${esc(BY_ID[t.id].rom)}</span></button>`).join(''):'<span class="ph">your sentence appears here</span>'}</div>
+      <div class="tiles" id="tiles">${B.tiles.map((t,i)=>`<button class="tile ${B.picked.includes(t)?'used':''}" data-i="${i}"><span class="t">${esc(BY_ID[t.id].th)}</span><span class="r">${esc(BY_ID[t.id].rom)}</span></button>`).join('')}</div>
+      ${done?`<div class="verdict ${B.ok?'ok':'bad'}" style="margin-top:14px"><h3>${B.ok?'✓ Correct':'✗ Not quite'}</h3>
+          <div class="thai" style="font-size:28px">${s.ids.map(id=>esc(BY_ID[id].th)).join(' ')}</div>
+          <div class="rom">${s.ids.map(id=>esc(BY_ID[id].rom)).join(' ')}</div>
+          <div class="gloss">${s.ids.map(id=>`<span><b>${esc(BY_ID[id].th)}</b> ${esc(BY_ID[id].en.split('/')[0].replace(/\(.*\)/,'').trim())}</span>`).join('')}</div></div>
+        <div class="row"><button class="listen" id="bsay">🔊</button><button class="btn gold" id="bnext">Next →</button></div>`
+      :`<div class="row"><button class="btn ghost" id="bclear" ${B.picked.length?'':'disabled'}>Clear</button><button class="btn gold" id="bcheck" ${B.picked.length?'':'disabled'}>Check</button></div>`}
+    </div>`;
+  stage().innerHTML=html;
+  const slot=$('slot'), tiles=$('tiles');
+  if(!done){
+    tiles.onclick=e=>{ const b=e.target.closest('.tile'); if(!b) return; const t=B.tiles[+b.dataset.i]; if(B.picked.includes(t)) return; B.picked.push(t); renderBuild(); };
+    slot.onclick=e=>{ const b=e.target.closest('.tile'); if(!b) return; B.picked.splice(+b.dataset.i,1); renderBuild(); };
+    $('bclear').onclick=()=>{ B.picked=[]; renderBuild(); };
+    $('bcheck').onclick=()=>{
+      B.ok = pickedIds.length===s.ids.length && pickedIds.every((id,i)=>id===s.ids[i]);
+      const k=sentKey(s); const r=S.sent[k]||{ok:0,bad:0}; B.ok?r.ok++:r.bad++; S.sent[k]=r; logActivity(); save();
+      B.n++; if(B.ok) B.right++; B.phase="done"; renderBuild();
+      if(S.settings.autoplay) speak(s.ids.map(id=>BY_ID[id].th).join(''));
+      if(navigator.vibrate) navigator.vibrate(B.ok?15:[30,40,30]);
+    };
+  } else {
+    $('bsay').onclick=()=>speak(s.ids.map(id=>BY_ID[id].th).join(''));
+    $('bnext').onclick=()=>{ newSentence(); renderBuild(); };
+  }
+  renderStat();
+}
+
+// ---------------------------------------------------------------------
+//  TONES (identify the tone)
+// ---------------------------------------------------------------------
+function tonePool(){ return WORDS.filter(w=>!w.tone.includes('+')); }
+function renderTones(){
+  const pool=tonePool();
+  if(!T.cur){ let c; do{ c=pool[Math.floor(Math.random()*pool.length)]; }while(pool.length>1 && c===T.last); T.cur=c; T.phase="ask"; T.pick=null; }
+  const w=T.cur; const done=T.phase!=="ask"; const voice=hasThaiVoice();
+  const html=`
+    <div class="barlabel"><span>Which tone is it?</span><span>${T.right}/${T.n}</span></div>
+    <div class="bar jade"><i style="width:${T.n?T.right/T.n*100:0}%"></i></div>
+    <div class="card pop">
+      <div class="prompt th">${esc(w.th)}</div>
+      <div class="sub">${esc(w.en)}${done?` · <span style="color:var(--gold)">${esc(w.rom)}</span>`:''}</div>
+      ${voice?`<button class="listen big" id="tplay">🔊</button>`:`<div class="sub" style="margin-top:12px">Look at the tone marks in the Thai script (and the reference below) — no Thai voice on this device.</div>`}
+      <div class="tonegrid" id="tgrid">${TONES.map(t=>`<button class="tonebtn ${done&&t.key===w.tone?'ok':''} ${done&&T.pick===t.key&&t.key!==w.tone?'bad':''}" data-t="${t.key}" ${done?'disabled':''}>${t.label} <span class="mark" style="color:var(--gold)">${t.mark}</span><small>${t.desc}</small></button>`).join('')}</div>
+      ${done?`<div class="row"><button class="btn gold" id="tnext">Next →</button></div>`:''}
+    </div>
+    <details class="toneref"><summary>Tone reference & how the marks work</summary>
+      <table>${TONES.map(t=>{ const ex=pool.filter(x=>x.tone===t.key).slice(0,2); return `<tr><td>${t.label} <span class="mark">${t.mark}</span></td><td>${t.desc}<br><span style="color:var(--muted)">${ex.map(x=>`<span class="thai" style="font-size:18px">${esc(x.th)}</span> ${esc(x.rom)}`).join(' · ')}</span></td></tr>`; }).join('')}</table>
+      <p>In the romanisation, the little mark over the vowel <b>is</b> the tone: none = mid, <b>à</b> low, <b>â</b> falling, <b>á</b> high, <b>ǎ</b> rising. Thai has 5 tones and they change meaning: <span class="thai" style="font-size:16px">ไกล</span> glai (mid) = far, but <span class="thai" style="font-size:16px">ใกล้</span> glâi (falling) = near! When you type answers, tones are optional — but try to say them out loud.</p>
+    </details>`;
+  stage().innerHTML=html;
+  const play=$('tplay'); if(play){ play.onclick=()=>speak(w.th); if(!done&&S.settings.autoplay) setTimeout(()=>speak(w.th),150); }
+  if(!done) $('tgrid').onclick=e=>{ const b=e.target.closest('.tonebtn'); if(!b) return; T.pick=b.dataset.t; T.phase="done"; T.n++; const ok=T.pick===w.tone; if(ok) T.right++; logActivity(); save(); if(navigator.vibrate) navigator.vibrate(ok?15:[30,40,30]); renderTones(); };
+  else $('tnext').onclick=()=>{ T.last=T.cur; T.cur=null; renderTones(); };
+  renderStat();
+}
+
+// ---------------------------------------------------------------------
+//  PROGRESS
+// ---------------------------------------------------------------------
+function renderProgress(){
+  const total=WORDS.length; let solid=0,learning=0,weak=0,fresh=0,right=0,wrong=0;
+  WORDS.forEach(w=>{ const s=st(w.id); right+=s.right; wrong+=s.wrong; if(s.seen===0) fresh++; else if(known(w.id)) solid++; else if(s.wrong>0) weak++; else learning++; });
+  const acc=right+wrong?Math.round(right/(right+wrong)*100):0;
+  const due=WORDS.filter(w=>isDue(w.id)).length;
+  // heatmap: last 16 weeks ending today, columns = weeks, rows = Mon..Sun
+  const today=new Date(); today.setHours(0,0,0,0);
+  const dow=(today.getDay()+6)%7; // Mon=0
+  const start=new Date(today); start.setDate(today.getDate()-dow-7*15);
+  let cells=""; const d=new Date(start);
+  while(d<=today){ const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; const n=S.activity[k]||0;
+    const lvl=n>=S.settings.goal?3:n>=Math.ceil(S.settings.goal/2)?2:n>0?1:0; cells+=`<i class="${lvl?'l'+lvl:''} ${k===todayKey()?'today':''}" title="${k}: ${n}"></i>`; d.setDate(d.getDate()+1); }
+  const cats=CATS().map(c=>{ const ws=WORDS.filter(w=>w.cat===c); let s=0,l=0,wk=0; ws.forEach(w=>{const x=st(w.id); if(x.seen===0)return; if(known(w.id))s++; else if(x.wrong>0)wk++; else l++;}); return {c,n:ws.length,s,l,wk}; });
+  const weakList=WORDS.filter(w=>isWeak(w.id)).sort((a,b)=>(st(b.id).wrong-st(b.id).right)-(st(a.id).wrong-st(a.id).right)).slice(0,12);
+  const sd=streakDays();
+  const html=`
+    <div class="grid4">
+      <div class="kpi"><b>🔥${sd}</b><span>day streak</span></div>
+      <div class="kpi"><b>${todayCount()}</b><span>today / ${S.settings.goal}</span></div>
+      <div class="kpi"><b>${acc}%</b><span>accuracy</span></div>
+      <div class="kpi"><b>${due}</b><span>due now</span></div>
+    </div>
+    <div class="panel"><h2>Activity · last 16 weeks</h2><div class="heat">${cells}</div>
+      <div class="legend"><span><i style="background:var(--surface2)"></i>none</span><span><i style="background:rgba(231,178,76,.35)"></i>some</span><span><i style="background:rgba(231,178,76,.6)"></i>half goal</span><span><i style="background:var(--gold)"></i>goal</span></div></div>
+    <div class="panel"><h2>Vocabulary · ${solid} solid, ${learning} learning, ${weak} weak, ${fresh} new</h2>
+      <div class="mrow"><div class="n">All words</div><div class="stack"><i class="s" style="width:${solid/total*100}%"></i><i class="l" style="width:${learning/total*100}%"></i><i class="w" style="width:${weak/total*100}%"></i></div><div class="c">${solid}/${total}</div></div>
+      ${cats.map(x=>`<div class="mrow"><div class="n">${esc(x.c)}</div><div class="stack"><i class="s" style="width:${x.s/x.n*100}%"></i><i class="l" style="width:${x.l/x.n*100}%"></i><i class="w" style="width:${x.wk/x.n*100}%"></i></div><div class="c">${x.s}/${x.n}</div></div>`).join('')}
+      <div class="legend"><span><i style="background:var(--jade)"></i>solid</span><span><i style="background:var(--gold)"></i>learning</span><span><i style="background:var(--clay)"></i>weak</span></div></div>
+    <div class="panel"><h2>Weak words</h2>${weakList.length?`<div class="list">`+weakList.map(w=>`<div class="item" data-say="${esc(w.th)}"><div class="thai">${esc(w.th)}</div><div class="en">${esc(w.en)}<small>missed ${st(w.id).wrong}× · ${esc(w.tone)}</small></div><div class="rom">${esc(w.rom)}</div><button>🔊</button></div>`).join('')+`</div><div class="row"><button class="btn miss" id="drillweak">Drill weak words →</button></div>`:`<div class="empty" style="padding:14px">No weak words right now 🎉</div>`}</div>
+    <div class="panel"><h2>Settings</h2>
+      <div class="setrow"><span>Daily goal</span><select id="goal">${[10,20,30,50,100].map(g=>`<option ${S.settings.goal===g?'selected':''}>${g}</option>`).join('')}</select></div>
+      <div class="setrow"><span>Auto-play audio</span><button class="toggle ${S.settings.autoplay?'on':''}" id="autoplay" aria-label="toggle autoplay"></button></div>
+      <div class="setrow"><span>Extra distractor tile in Build</span><button class="toggle ${S.settings.distractor?'on':''}" id="distractor" aria-label="toggle distractor"></button></div>
+      <div class="setrow"><span>Speech speed <small style="color:var(--muted)">${S.settings.rate.toFixed(1)}×</small></span><input type="range" id="rate" min="0.5" max="1.2" step="0.1" value="${S.settings.rate}"></div>
+      <div class="setrow"><span>Test Thai voice</span><button class="small" id="testvoice">🔊 สวัสดีครับ</button></div>
+    </div>
+    <div class="panel"><h2>Your data</h2>
+      <div class="row" style="margin-top:0"><button class="small" id="export">Export</button><button class="small" id="import">Import</button><button class="small danger" id="reset">Reset progress</button></div>
+      <textarea class="io" id="io" placeholder="Export puts your progress here as JSON — copy it to move to another device. Paste JSON here and press Import to restore." style="display:none"></textarea>
+    </div>`;
+  stage().innerHTML=html;
+  $('goal').onchange=e=>{ S.settings.goal=+e.target.value; save(); renderProgress(); };
+  $('autoplay').onclick=()=>{ S.settings.autoplay=!S.settings.autoplay; save(); renderProgress(); };
+  $('distractor').onclick=()=>{ S.settings.distractor=!S.settings.distractor; save(); B.cur=null; renderProgress(); };
+  $('rate').oninput=e=>{ S.settings.rate=+e.target.value; save(); e.target.previousElementSibling.querySelector('small').textContent=S.settings.rate.toFixed(1)+'×'; };
+  $('rate').onchange=()=>speak('สวัสดีครับ');
+  $('testvoice').onclick=()=>speak('สวัสดีครับ');
+  document.querySelectorAll('.item[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say));
+  const dw=$('drillweak'); if(dw) dw.onclick=()=>{ P.filter="Weak"; P.cur=null; P.phase="ask"; setMode("practice"); };
+  $('export').onclick=()=>{ const io=$('io'); io.style.display='block'; io.value=JSON.stringify(S); io.select(); try{ navigator.clipboard.writeText(io.value); toast('Copied to clipboard'); }catch(e){} };
+  $('import').onclick=()=>{ const io=$('io'); if(io.style.display==='none'){ io.style.display='block'; io.value=''; io.placeholder='Paste your exported JSON here, then press Import again.'; io.focus(); return; }
+    try{ const j=JSON.parse(io.value); if(!j.stats) throw 0; S={...S,...j,settings:{...DEFAULT_SETTINGS,...(j.settings||{})}}; save(); toast('Progress imported'); renderProgress(); }catch(e){ toast('That is not valid export data'); } };
+  $('reset').onclick=()=>{ if(!confirm('Reset all progress on this device? This cannot be undone.')) return; S={stats:{},activity:{},sent:{},settings:S.settings}; save(); P={...P,cur:null,phase:"ask",session:{n:0,right:0}}; B={...B,cur:null,right:0,n:0}; T={...T,cur:null,right:0,n:0}; toast('Progress reset'); renderProgress(); };
+  renderStat();
+}
+
+// ---------------------------------------------------------------------
+//  ROUTER
+// ---------------------------------------------------------------------
+const FOOT={
+  practice:"Type the answer, then Check. Romanised spelling is matched leniently (khao / kao / khâao all count). Missed words come back sooner; solid words space out over days.",
+  learn:"Flip cards by tapping, swipe for next. Use the search to look up any word.",
+  build:"Build the Thai sentence in the right order. Thai word order is mostly Subject–Verb–Object; question particles (ไหม) go at the end.",
+  tones:"Thai has 5 tones — the same syllable with a different tone is a different word. Train your ear here.",
+  progress:"Progress is saved in this browser only. Export it to move to another device."
+};
+function setMode(m){
+  mode=m; document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+  $('foot').textContent=FOOT[m]||"";
+  render(); window.scrollTo({top:0});
+}
+function render(){
+  if(mode==="practice") renderPractice();
+  else if(mode==="learn") renderLearn();
+  else if(mode==="build") renderBuild();
+  else if(mode==="tones") renderTones();
+  else renderProgress();
+}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+
+// keyboard shortcut: Enter on verdict = next
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  const n=$('next')||$('bnext')||$('tnext'); if(n){ e.preventDefault(); n.click(); }
+});
+
+load(); setMode("practice");
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
