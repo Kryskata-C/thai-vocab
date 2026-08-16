@@ -159,10 +159,12 @@
   .tonebtn.ok{border-color:var(--jade);background:rgba(95,179,138,.18)}
   .tonebtn.bad{border-color:var(--clay);background:rgba(224,120,86,.16)}
   .tonebtn:disabled{cursor:default}
-  .toneref{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 14px}
-  .toneref summary{cursor:pointer;font-size:13.5px;font-weight:600;padding:8px 0;list-style:none;display:flex;justify-content:space-between}
-  .toneref summary::after{content:"+";color:var(--muted)}
-  .toneref[open] summary::after{content:"–"}
+  .toneref,.dayref{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 14px}
+  .toneref summary,.dayref summary{cursor:pointer;font-size:13.5px;font-weight:600;padding:8px 0;list-style:none;display:flex;justify-content:space-between}
+  .toneref summary::after,.dayref summary::after{content:"+";color:var(--muted)}
+  .toneref[open] summary::after,.dayref[open] summary::after{content:"–"}
+  .dayref{margin-top:0;margin-bottom:8px}
+  .dayref .list{margin:0 0 10px}
   .toneref table{width:100%;border-collapse:collapse;font-size:13px;margin:4px 0 10px}
   .toneref td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:top}
   .toneref td:first-child{font-weight:600;white-space:nowrap}
@@ -230,7 +232,8 @@
 </div>
 
 <nav class="nav"><div class="nav-inner">
-  <button data-mode="practice" class="active"><span class="ic">⌨️</span>Practice</button>
+  <button data-mode="today" class="active"><span class="ic">📅</span>Today</button>
+  <button data-mode="practice"><span class="ic">⌨️</span>Practice</button>
   <button data-mode="learn"><span class="ic">🃏</span>Learn</button>
   <button data-mode="build"><span class="ic">🧩</span>Build</button>
   <button data-mode="tones"><span class="ic">🎵</span>Tones</button>
@@ -286,6 +289,15 @@ const WORDS = [
   {id:"dai",th:"ได้",rom:"dâi",en:"can / able to",alt:["able","ok","okay","possible"],tone:"falling",day:4,cat:"Verbs"},
   {id:"ruu",th:"รู้",rom:"rúu",en:"know",tone:"high",day:4,cat:"Verbs"},
   {id:"duu",th:"ดู",rom:"duu",en:"see / look",alt:["watch"],tone:"mid",day:4,cat:"Verbs"},
+  // Day 5
+  {id:"yuu",th:"อยู่",rom:"yùu",en:"to be (located) / at",alt:["is located","located","be located","is at","to be at","stay","live"],tone:"low",day:5,cat:"Verbs"},
+  {id:"raan",th:"ร้าน",rom:"ráan",en:"shop / restaurant",alt:["store"],tone:"high",day:5,cat:"Places"},
+  {id:"hongnaam",th:"ห้องน้ำ",rom:"hông-náam",en:"bathroom / toilet",alt:["restroom","washroom","wc"],tone:"falling+high",day:5,cat:"Places"},
+  {id:"rot",th:"รถ",rom:"rót",en:"car",alt:["vehicle"],tone:"high",day:5,cat:"Things"},
+  {id:"aahaan",th:"อาหาร",rom:"aa-hǎan",en:"food",alt:["meal","dish"],tone:"mid+rising",day:5,cat:"Things"},
+  {id:"dii",th:"ดี",rom:"dii",en:"good",alt:["fine","well","nice"],tone:"mid",day:5,cat:"Describe"},
+  {id:"suay",th:"สวย",rom:"sǔay",en:"beautiful / pretty",alt:["pretty","lovely"],tone:"rising",day:5,cat:"Describe"},
+  {id:"wannii",th:"วันนี้",rom:"wan-níi",en:"today",tone:"mid+high",day:5,cat:"Time"},
 ];
 const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
 
@@ -311,6 +323,12 @@ const SENTENCES = [
   {en:"Come here!",ids:["maa","thiinii"]},
   {en:"Not spicy, please.",ids:["mai_not","phet","khrap"]},
   {en:"Do you know him?",ids:["khun","ruu","mai_q"]},
+  {en:"Where's the bathroom?",ids:["hongnaam","yuu","thiinai","khrap"]},
+  {en:"Where's a restaurant?",ids:["raan","aahaan","yuu","thiinai","khrap"]},
+  {en:"This food is very good.",ids:["aahaan","nii","dii","maak"]},
+  {en:"Where's the car?",ids:["rot","yuu","thiinai"]},
+  {en:"The food's really delicious.",ids:["aahaan","aroi","maak","khrap"]},
+  {en:"Is the food good today?",ids:["wannii","aahaan","dii","mai_q"]},
 ];
 
 const TONES = [
@@ -422,7 +440,7 @@ function checkEn(w,input){
 //  APP STATE
 // =====================================================================
 let mode="practice";
-let P={sub:"type",filter:"All",cur:null,phase:"ask",verdict:null,hint:0,session:{n:0,right:0},done:false};
+let P={sub:"type",filter:"All",scope:null,dayOpen:false,cur:null,phase:"ask",verdict:null,hint:0,session:{n:0,right:0},done:false};
 let L={view:"cards",day:"All",q:"",idx:0,flipped:false};
 let B={cur:null,order:[],picked:[],phase:"ask",tiles:[],right:0,n:0};
 let T={cur:null,phase:"ask",pick:null,right:0,n:0};
@@ -433,6 +451,7 @@ function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show');
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 const CATS=()=>[...new Set(WORDS.map(w=>w.cat))];
 const DAYS=()=>[...new Set(WORDS.map(w=>w.day))].sort((a,b)=>a-b);
+const NEWEST_DAY=()=>Math.max(...DAYS()); // "today" = the latest day in the word bank
 
 function renderStat(){
   const total=WORDS.length,k=WORDS.filter(w=>known(w.id)).length, sd=streakDays();
@@ -443,6 +462,7 @@ function renderStat(){
 //  PRACTICE (typed recall)
 // ---------------------------------------------------------------------
 function practicePool(){
+  if(mode==="today") return WORDS.filter(w=>w.day===NEWEST_DAY());
   if(P.filter==="Due") return WORDS.filter(w=>isDue(w.id));
   if(P.filter==="Weak") return WORDS.filter(w=>isWeak(w.id));
   if(P.filter==="New") return WORDS.filter(w=>st(w.id).seen===0);
@@ -461,6 +481,8 @@ function pickNext(){ const p=practicePool(); if(!p.length) return null; return p
 
 function renderPractice(){
   const goal=S.settings.goal, tc=todayCount();
+  const todayMode=mode==="today", scope=todayMode?"today":"all";
+  if(P.scope!==scope){ P.scope=scope; P.cur=null; P.phase="ask"; P.hint=0; }
   const listenOk = P.sub!=="listen" || hasThaiVoice() || !window.speechSynthesis;
   const filters=["All","Due","Weak","New",...CATS()];
   const cnt=f=>{ const old=P.filter; P.filter=f; const n=practicePool().length; P.filter=old; return n; };
@@ -470,15 +492,15 @@ function renderPractice(){
       <button data-sub="listen" class="${P.sub==='listen'?'active':''}">Listen 🔊</button>
       <button data-sub="read" class="${P.sub==='read'?'active':''}">Thai → EN</button>
     </div>
-    <div class="chips" id="chips">${filters.map(f=>{
+    ${todayMode?todayHeader():`<div class="chips" id="chips">${filters.map(f=>{
       const n=cnt(f); const cls=f==="Weak"?"clay":f==="Due"?"jade":"";
-      return `<button class="chip ${cls} ${f===P.filter?'active':''}" data-f="${f}">${f}${["Due","Weak","New"].includes(f)?` ${n}`:''}</button>`; }).join('')}</div>
+      return `<button class="chip ${cls} ${f===P.filter?'active':''}" data-f="${f}">${f}${["Due","Weak","New"].includes(f)?` ${n}`:''}</button>`; }).join('')}</div>`}
     <div class="barlabel"><span>Today ${Math.min(tc,goal)}/${goal}${tc>=goal?' ✓ goal reached':''}</span><span>Session ${P.session.right}/${P.session.n}</span></div>
     <div class="bar ${tc>=goal?'jade':''}"><i style="width:${Math.min(100,tc/goal*100)}%"></i></div>`;
 
   if(!P.cur) P.cur=pickNext();
   if(!P.cur){
-    html+=`<div class="empty">${P.filter==="Due"?"Nothing due right now 🎉<br>Come back later or practise another set.":P.filter==="Weak"?"No weak words 🎉<br>Words you miss will show up here.":P.filter==="New"?"You've seen every word! Switch to All or Due.":"No words in this set yet."}</div>`;
+    html+=`<div class="empty">${todayMode?`No words for Day ${NEWEST_DAY()} yet.`:P.filter==="Due"?"Nothing due right now 🎉<br>Come back later or practise another set.":P.filter==="Weak"?"No weak words 🎉<br>Words you miss will show up here.":P.filter==="New"?"You've seen every word! Switch to All or Due.":"No words in this set yet."}</div>`;
     stage().innerHTML=html; bindPractice(); renderStat(); return;
   }
   const w=P.cur;
@@ -514,6 +536,12 @@ function renderPractice(){
   else if(P.sub!=="listen" && S.settings.autoplay) speak(w.th);
   renderStat();
 }
+function todayHeader(){
+  const d=NEWEST_DAY(), ws=WORDS.filter(w=>w.day===d), solid=ws.filter(w=>known(w.id)).length;
+  return `<details class="dayref" id="dayref" ${P.dayOpen?'open':''}><summary><span>📅 Day ${d} · ${ws.length} words · ${solid} solid</span></summary>
+    <div class="list">${ws.map(w=>`<div class="item" data-say="${esc(w.th)}"><div class="thai">${esc(w.th)}</div><div class="en">${esc(w.en)}<small>${esc(w.tone)} · ${esc(w.cat)}</small></div><div class="rom">${esc(w.rom)}</div>${badge(w)}<button aria-label="listen">🔊</button></div>`).join('')}</div>
+    <div class="row" style="margin:0 0 10px"><button class="link" id="daycards">🃏 Flashcards for Day ${d} →</button></div></details>`;
+}
 function hintText(w){
   if(!P.hint) return "";
   const alts=romAlts(w); const r=alts[alts.length-1]||w.rom;
@@ -522,6 +550,8 @@ function hintText(w){
   return P.hint===1?`${syl} syllable${syl>1?'s':''} · starts with “${r[0]}”`:`${r.slice(0,Math.ceil(r.length/2))}…`;
 }
 function bindPractice(){
+  const dr=$('dayref'); if(dr){ dr.ontoggle=()=>{ P.dayOpen=dr.open; }; dr.querySelectorAll('.item[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say)); }
+  const dc=$('daycards'); if(dc) dc.onclick=()=>{ L.day=NEWEST_DAY(); L.view="cards"; L.idx=0; L.flipped=false; setMode("learn"); };
   const seg=$('subseg'); if(seg) seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{ P.sub=b.dataset.sub; P.cur=null; P.phase="ask"; P.hint=0; renderPractice(); });
   const chips=$('chips'); if(chips) chips.onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; P.filter=b.dataset.f; P.cur=null; P.phase="ask"; P.hint=0; renderPractice(); };
   const form=$('ansform'); if(form) form.onsubmit=e=>{ e.preventDefault(); submitAnswer($('ans').value); };
@@ -753,6 +783,7 @@ function renderProgress(){
 //  ROUTER
 // ---------------------------------------------------------------------
 const FOOT={
+  today:"Practise just the newest day's words. Add words to the bank under a new day and this tab follows automatically.",
   practice:"Type the answer, then Check. Romanised spelling is matched leniently (khao / kao / khâao all count). Missed words come back sooner; solid words space out over days.",
   learn:"Flip cards by tapping, swipe for next. Use the search to look up any word.",
   build:"Build the Thai sentence in the right order. Thai word order is mostly Subject–Verb–Object; question particles (ไหม) go at the end.",
@@ -765,7 +796,7 @@ function setMode(m){
   render(); window.scrollTo({top:0});
 }
 function render(){
-  if(mode==="practice") renderPractice();
+  if(mode==="practice"||mode==="today") renderPractice();
   else if(mode==="learn") renderLearn();
   else if(mode==="build") renderBuild();
   else if(mode==="tones") renderTones();
@@ -780,7 +811,7 @@ document.addEventListener('keydown',e=>{
   const n=$('next')||$('bnext')||$('tnext'); if(n){ e.preventDefault(); n.click(); }
 });
 
-load(); setMode("practice");
+load(); setMode("today");
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
