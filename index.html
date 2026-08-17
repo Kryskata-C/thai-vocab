@@ -440,7 +440,7 @@ function checkEn(w,input){
 //  APP STATE
 // =====================================================================
 let mode="practice";
-let P={sub:"type",filter:"All",scope:null,dayOpen:false,cur:null,phase:"ask",verdict:null,hint:0,session:{n:0,right:0},done:false};
+let P={sub:"type",filter:"All",scope:null,day:null,dayOpen:false,cur:null,phase:"ask",verdict:null,hint:0,session:{n:0,right:0},done:false};
 let L={view:"cards",day:"All",q:"",idx:0,flipped:false};
 let B={cur:null,order:[],picked:[],phase:"ask",tiles:[],right:0,n:0};
 let T={cur:null,phase:"ask",pick:null,right:0,n:0};
@@ -452,6 +452,7 @@ function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.rand
 const CATS=()=>[...new Set(WORDS.map(w=>w.cat))];
 const DAYS=()=>[...new Set(WORDS.map(w=>w.day))].sort((a,b)=>a-b);
 const NEWEST_DAY=()=>Math.max(...DAYS()); // "today" = the latest day in the word bank
+const TODAY_DAY=()=>DAYS().includes(P.day)?P.day:NEWEST_DAY(); // day selected in the Today tab (defaults to newest)
 
 function renderStat(){
   const total=WORDS.length,k=WORDS.filter(w=>known(w.id)).length, sd=streakDays();
@@ -462,7 +463,7 @@ function renderStat(){
 //  PRACTICE (typed recall)
 // ---------------------------------------------------------------------
 function practicePool(){
-  if(mode==="today") return WORDS.filter(w=>w.day===NEWEST_DAY());
+  if(mode==="today") return WORDS.filter(w=>w.day===TODAY_DAY());
   if(P.filter==="Due") return WORDS.filter(w=>isDue(w.id));
   if(P.filter==="Weak") return WORDS.filter(w=>isWeak(w.id));
   if(P.filter==="New") return WORDS.filter(w=>st(w.id).seen===0);
@@ -481,7 +482,7 @@ function pickNext(){ const p=practicePool(); if(!p.length) return null; return p
 
 function renderPractice(){
   const goal=S.settings.goal, tc=todayCount();
-  const todayMode=mode==="today", scope=todayMode?"today":"all";
+  const todayMode=mode==="today", scope=todayMode?"today:"+TODAY_DAY():"all";
   if(P.scope!==scope){ P.scope=scope; P.cur=null; P.phase="ask"; P.hint=0; }
   const listenOk = P.sub!=="listen" || hasThaiVoice() || !window.speechSynthesis;
   const filters=["All","Due","Weak","New",...CATS()];
@@ -500,7 +501,7 @@ function renderPractice(){
 
   if(!P.cur) P.cur=pickNext();
   if(!P.cur){
-    html+=`<div class="empty">${todayMode?`No words for Day ${NEWEST_DAY()} yet.`:P.filter==="Due"?"Nothing due right now 🎉<br>Come back later or practise another set.":P.filter==="Weak"?"No weak words 🎉<br>Words you miss will show up here.":P.filter==="New"?"You've seen every word! Switch to All or Due.":"No words in this set yet."}</div>`;
+    html+=`<div class="empty">${todayMode?`No words for Day ${TODAY_DAY()} yet.`:P.filter==="Due"?"Nothing due right now 🎉<br>Come back later or practise another set.":P.filter==="Weak"?"No weak words 🎉<br>Words you miss will show up here.":P.filter==="New"?"You've seen every word! Switch to All or Due.":"No words in this set yet."}</div>`;
     stage().innerHTML=html; bindPractice(); renderStat(); return;
   }
   const w=P.cur;
@@ -537,8 +538,9 @@ function renderPractice(){
   renderStat();
 }
 function todayHeader(){
-  const d=NEWEST_DAY(), ws=WORDS.filter(w=>w.day===d), solid=ws.filter(w=>known(w.id)).length;
-  return `<details class="dayref" id="dayref" ${P.dayOpen?'open':''}><summary><span>📅 Day ${d} · ${ws.length} words · ${solid} solid</span></summary>
+  const d=TODAY_DAY(), nd=NEWEST_DAY(), ws=WORDS.filter(w=>w.day===d), solid=ws.filter(w=>known(w.id)).length;
+  return `<div class="chips" id="daychips">${DAYS().map(x=>`<button class="chip ${x===d?'active':''}" data-day="${x}">Day ${x}${x===nd?' · today':''}</button>`).join('')}</div>
+    <details class="dayref" id="dayref" ${P.dayOpen?'open':''}><summary><span>📅 Day ${d} · ${ws.length} words · ${solid} solid</span></summary>
     <div class="list">${ws.map(w=>`<div class="item" data-say="${esc(w.th)}"><div class="thai">${esc(w.th)}</div><div class="en">${esc(w.en)}<small>${esc(w.tone)} · ${esc(w.cat)}</small></div><div class="rom">${esc(w.rom)}</div>${badge(w)}<button aria-label="listen">🔊</button></div>`).join('')}</div>
     <div class="row" style="margin:0 0 10px"><button class="link" id="daycards">🃏 Flashcards for Day ${d} →</button></div></details>`;
 }
@@ -550,8 +552,9 @@ function hintText(w){
   return P.hint===1?`${syl} syllable${syl>1?'s':''} · starts with “${r[0]}”`:`${r.slice(0,Math.ceil(r.length/2))}…`;
 }
 function bindPractice(){
+  const dch=$('daychips'); if(dch) dch.onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; P.day=+b.dataset.day; renderPractice(); };
   const dr=$('dayref'); if(dr){ dr.ontoggle=()=>{ P.dayOpen=dr.open; }; dr.querySelectorAll('.item[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say)); }
-  const dc=$('daycards'); if(dc) dc.onclick=()=>{ L.day=NEWEST_DAY(); L.view="cards"; L.idx=0; L.flipped=false; setMode("learn"); };
+  const dc=$('daycards'); if(dc) dc.onclick=()=>{ L.day=TODAY_DAY(); L.view="cards"; L.idx=0; L.flipped=false; setMode("learn"); };
   const seg=$('subseg'); if(seg) seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{ P.sub=b.dataset.sub; P.cur=null; P.phase="ask"; P.hint=0; renderPractice(); });
   const chips=$('chips'); if(chips) chips.onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; P.filter=b.dataset.f; P.cur=null; P.phase="ask"; P.hint=0; renderPractice(); };
   const form=$('ansform'); if(form) form.onsubmit=e=>{ e.preventDefault(); submitAnswer($('ans').value); };
@@ -783,7 +786,7 @@ function renderProgress(){
 //  ROUTER
 // ---------------------------------------------------------------------
 const FOOT={
-  today:"Practise just the newest day's words. Add words to the bank under a new day and this tab follows automatically.",
+  today:"Practise one day at a time. Opens on the newest day; tap another day to revisit it.",
   practice:"Type the answer, then Check. Romanised spelling is matched leniently (khao / kao / khâao all count). Missed words come back sooner; solid words space out over days.",
   learn:"Flip cards by tapping, swipe for next. Use the search to look up any word.",
   build:"Build the Thai sentence in the right order. Thai word order is mostly Subject–Verb–Object; question particles (ไหม) go at the end.",
