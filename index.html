@@ -98,6 +98,7 @@
   .verdict.ok h3{color:#bfe8d4}.verdict.close h3{color:var(--gold)}.verdict.bad h3{color:#f2c3b1}
   .verdict .thai{font-size:34px}
   .verdict .rom{font-size:17px}
+  .verdict .answer{font-family:'Bricolage Grotesque',sans-serif;font-weight:600;font-size:28px;line-height:1.2;overflow-wrap:anywhere}
   .verdict .note{font-size:12.5px;color:var(--muted);margin-top:4px}
   .hintline{margin-top:10px;font-size:13px;color:var(--muted);min-height:18px}
   .link{background:transparent;border:0;color:var(--muted);text-decoration:underline;font-size:12.5px;cursor:pointer;padding:6px 8px}
@@ -521,8 +522,11 @@ function renderPractice(){
     const v=P.verdict;
     html+=`<div class="verdict ${v}">
         <h3>${v==="ok"?"✓ Correct":v==="close"?"≈ Close enough":"✗ Not quite"}</h3>
-        <div class="thai">${esc(w.th)}</div><div class="rom">${esc(w.rom)}</div>
-        <div class="note">${esc(w.en)} · ${esc(w.tone)} tone${P.typed?` · you typed “${esc(P.typed)}”`:''}</div>
+        ${P.sub==="read"
+          ? `<div class="answer">${esc(w.en)}</div><div class="rom">${esc(w.rom)} · <span class="thai" style="font-size:20px">${esc(w.th)}</span></div>
+             <div class="note">${esc(w.tone)} tone${P.typed?` · you typed “${esc(P.typed)}”`:''}</div>`
+          : `<div class="thai">${esc(w.th)}</div><div class="rom">${esc(w.rom)}</div>
+             <div class="note">${esc(w.en)} · ${esc(w.tone)} tone${P.typed?` · you typed “${esc(P.typed)}”`:''}</div>`}
       </div>
       <div class="row"><button class="listen" id="say">🔊</button>
         ${v==="bad"?`<button class="btn got" id="override">I was right</button>`:''}
