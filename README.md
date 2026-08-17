@@ -13,7 +13,7 @@ A tiny, mobile-first web app for learning Thai vocabulary by **typing the answer
 | 🃏 **Learn** | Flip-able flashcards (tap / swipe) by day, plus a searchable word list with 🔊, mastery badges and notes. |
 | 🧩 **Build** | **Tiles** — tap Thai word tiles into order. **Type it** — write the whole sentence in romanised Thai (matched word by word, spaces/hyphens ignored; each word is marked ok / close / bad). **Patterns** — fill-the-blank drills on frames like *[X] yùu thîi-nǎi?*, *khǒ [X] khráp*, *[X] mǎi?*, with a reference list of every pattern. |
 | 🎵 **Tones** | Tone drill — hear/see a word and pick its tone. Words you miss (in drills or tone follow-ups) come up more often; **Missed** drills only those. Plus a tone reference. |
-| 📈 **Progress** | Streak, goal, accuracy, due count, 16-week heatmap, **per-day mastery** (tap a day to drill it), per-direction and per-category bars, weak words, settings (goal, autoplay, distractor tile, **hard mode** = tone marks required, review size, speech speed), and Export / **Copy link** / Import / Reset. |
+| 📈 **Progress** | Streak, goal, accuracy, due count, **all-time answers** (every drill, any direction) and total word translations, 16-week heatmap, **per-day mastery** (tap a day to drill it), per-direction and per-category bars, weak words, settings (goal, autoplay, distractor tile, **hard mode** = tone marks required, review size, speech speed), and Export / **Copy link** / Import / Reset. |
 
 ## How the review scheduling works
 

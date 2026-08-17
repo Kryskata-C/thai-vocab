@@ -1016,12 +1016,18 @@ function renderProgress(){
   const cats=CATS().map(c=>{ const ws=WORDS.filter(w=>w.cat===c); let s=0,l=0,wk=0; ws.forEach(w=>{const x=st(w.id); if(x.seen===0)return; if(known(w.id))s++; else if(x.wrong>0)wk++; else l++;}); return {c,n:ws.length,s,l,wk}; });
   const weakList=WORDS.filter(w=>isWeak(w.id)).sort((a,b)=>(st(b.id).wrong-st(b.id).right)-(st(a.id).wrong-st(a.id).right)).slice(0,12);
   const sd=streakDays();
+  const allTime=Object.values(S.activity).reduce((a,n)=>a+(n||0),0), activeDays=Object.values(S.activity).filter(n=>n>0).length;
+  const wordAnswers=WORDS.reduce((a,w)=>a+st(w.id).seen,0);
   const html=`
     <div class="grid4">
       <div class="kpi"><b>🔥${sd}</b><span>day streak</span></div>
       <div class="kpi"><b>${todayCount()}</b><span>today / ${S.settings.goal}</span></div>
       <div class="kpi"><b>${acc}%</b><span>accuracy</span></div>
       <div class="kpi"><b>${due}</b><span>due now</span></div>
+    </div>
+    <div class="grid2">
+      <div class="kpi"><b>${allTime.toLocaleString()}</b><span>answers all-time · any direction</span></div>
+      <div class="kpi"><b>${wordAnswers.toLocaleString()}</b><span>word translations · ${activeDays} active day${activeDays===1?'':'s'}</span></div>
     </div>
     <div class="panel"><h2>Activity · last 16 weeks</h2><div class="heat">${cells}</div>
       <div class="legend"><span><i style="background:var(--surface2)"></i>none</span><span><i style="background:rgba(231,178,76,.35)"></i>some</span><span><i style="background:rgba(231,178,76,.6)"></i>half goal</span><span><i style="background:var(--gold)"></i>goal</span></div></div>
