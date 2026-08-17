@@ -9,7 +9,7 @@ A tiny, mobile-first web app for learning Thai vocabulary by **typing the answer
 | Tab | What it does |
 |-----|--------------|
 | 📅 **Today** | Practice one day at a time. Opens on the newest day in the word bank (the highest `day` number); tap a day chip to revisit an earlier day. Shows that day's word list and a shortcut to its flashcards. |
-| ⌨️ **Practice** | Typed recall in three directions: **EN → Thai** (type romanised or Thai script), **Listen** (hear the word, type its meaning), **Thai → EN**. Lenient matching (`khao`, `kao`, `khâao` all count; near-misses count as "close"). Hints, "show answer", and an "I was right" override. Filter by category, **Due**, **Weak** or **New**. |
+| ⌨️ **Practice** | Typed recall in three directions: **EN → Thai** (type romanised or Thai script), **Listen** (hear the word, type its meaning), **Thai (rom) → EN** (see the romanised word, e.g. *yùu*, type the meaning). The same direction switch is on the Today tab. Lenient matching (`khao`, `kao`, `khâao` all count; near-misses count as "close"). Hints, "show answer", and an "I was right" override. Filter by category, **Due**, **Weak** or **New**. |
 | 🃏 **Learn** | Flip-able flashcards (tap / swipe) by day, plus a searchable word list with 🔊 and mastery badges. |
 | 🧩 **Build** | Sentence builder — tap Thai word tiles into the right order to translate an English sentence (with an optional distractor tile). Shows word-by-word gloss and speaks the sentence. |
 | 🎵 **Tones** | Tone drill — hear/see a word and pick its tone (mid / low / falling / high / rising), plus a tone reference. |
