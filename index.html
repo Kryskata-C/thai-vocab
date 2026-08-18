@@ -910,6 +910,12 @@ const TIP={mai_q:"mǎi turns a statement into a yes/no question — it always go
   wh:"Thai question words stay in the slot they ask about — no word-order flip", tammai:"tam-mai (why) sits at the FRONT; the rest of the sentence keeps its order",
   yangngai:"yang-ngai (how) goes at the END", kho:"khǒ + thing + khráp = the polite way to ask for something", exist:"place + mii + thing = there is … (mii doubles as 'there is/are')",
   or:"rʉ̌ʉ = or; an A-or-B question needs no mǎi", imp:"An order is just the bare verb — Thai drops the subject", with:"gàp = with / and — it joins two things or adds a companion after the verb"};
+// ---- Grammar lessons that gate frames. A frame with `lesson:"x"` only fires once LESSONS.x.day is set (and that day exists in the bank).
+//      day:null = upcoming — the pattern is known to the generator but not taught yet, so it never appears in drills.
+const LESSONS={
+  exist:{name:"mii = there is / there are",gloss:"place + mii + thing → 'there is …' (thîi-nîi mii hông-náam mǎi = Is there a bathroom here?)",day:null},
+};
+const lessonOn=id=>{ const l=LESSONS[id]; return !l || (l.day!=null && DAYS().includes(l.day)); };
 // ---- Frames.  Each gen() returns {ids, en, tip?} or null when the bank can't fill it.
 const FRAMES=[
   {id:'svo',w:5,gen(){ const v=pk(POS('v')), sb=subjOf(pk(chance(.75)?TELLERS():PRONS())); if(!v||!sb) return null; const r=Math.random();
@@ -969,7 +975,7 @@ const FRAMES=[
   {id:'kho',w:2,gen(){ if(!has('kho')||!has('khrap')) return null; const opts=[...POS('n').filter(n=>G(n).cls.some(c=>c==='food'||c==='drink')).map(n=>({ids:[n.id],en:G(n).a,cls:G(n).cls})),...POS('dem').map(d=>({ids:[d.id],en:G(d).en}))];
     let o=pk(opts); if(!o) return null; if(o.cls&&has('gap')&&chance(.25)){ const b=pk(opts.filter(x=>x.cls&&x.cls[0]!==o.cls[0])); if(b) o={ids:[o.ids[0],'gap',b.ids[0]],en:`${o.en} and ${b.en}`}; }
     return {ids:['kho',...o.ids,'khrap'],en:`May I have ${o.en}, please.`,tip:TIP.kho,polite:false}; }},
-  {id:'exist',w:2,gen(){ if(!has('mii')) return null; const l=pk(POS('loc')), n=pk(POS('n')); if(!l||!n) return null; const r=Math.random(), here=G(l).en, thing=G(n).a;
+  {id:'exist',w:2,lesson:'exist',gen(){ if(!has('mii')) return null; const l=pk(POS('loc')), n=pk(POS('n')); if(!l||!n) return null; const r=Math.random(), here=G(l).en, thing=G(n).a;
     if(r<.5) return {ids:[l.id,'mii',n.id,'mai_q'],en:`Is there ${thing} ${here}?`,tip:TIP.exist};
     if(r<.75) return {ids:[l.id,'mii',n.id],en:`There is ${thing} ${here}.`,tip:TIP.exist};
     return {ids:[l.id,'mai_not','mii',n.id],en:`There's no ${thing.replace(/^an? /,'')} ${here}.`,tip:TIP.exist}; }},
@@ -1001,7 +1007,7 @@ function sentScore(c){
   return p;
 }
 function genSentence(){
-  const rf=B.recentFrames||[], fd=S.settings.focusDay||0; const fr=FRAMES.map(f=>({f,w:f.w*(rf[0]===f.id?.08:rf.includes(f.id)?.35:1)}));
+  const rf=B.recentFrames||[], fd=S.settings.focusDay||0; const fr=FRAMES.filter(f=>lessonOn(f.lesson)).map(f=>({f,w:f.w*(rf[0]===f.id?.08:rf.includes(f.id)?.35:1)}));
   let best=null;
   for(let tries=0;tries<(fd?16:8);tries++){ // pick a frame (weighted, avoiding recent ones), then the best of its fills; with a focus day, compare several frames
     let r=Math.random()*fr.reduce((a,x)=>a+x.w,0), f=fr[fr.length-1].f; for(const x of fr){ r-=x.w; if(r<=0){ f=x.f; break; } }

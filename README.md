@@ -54,6 +54,8 @@ Words tell the generator how they behave through an optional `g` tag. **Without 
 
 Function words (*mâi, mǎi, thîi, gàp, rʉ̌ʉ, khráp, khǒ*, question words) are referenced by id inside the frames and need no tag; a frame simply doesn't fire until its words are in the bank.
 
+**Upcoming lessons.** Some patterns need teaching before they're drilled even if the words already exist. `LESSONS` in `index.html` lists them, and a frame with `lesson:"x"` only fires once `LESSONS.x.day` is set to the day it was learned. Currently gated: `exist` — *mii* as "there is / there are" (*place + mii + thing*), `day:null` = not taught yet, so *mii* only appears as "have" (subject + mii + object). To introduce it, set `LESSONS.exist.day` to that day's number.
+
 ## Run locally
 
 Just open `index.html`, or `python3 -m http.server` and visit http://localhost:8000 (needed for the service worker / PWA install).
