@@ -252,40 +252,42 @@
 <script>
 // =====================================================================
 //  WORD BANK  (progress is keyed by id, so the bank can grow safely)
+//  `g` = grammar tag for the Build-tab sentence generator (see README → "Grammar tags").
+//  Words without a tag still work everywhere; they just join fewer sentence frames.
 // =====================================================================
 const WORDS = [
   // Day 1
-  {id:"phom",th:"ผม",rom:"phǒm",en:"I / me (men)",tone:"rising",day:1,cat:"People"},
-  {id:"khun",th:"คุณ",rom:"khun",en:"you",tone:"mid",day:1,cat:"People"},
-  {id:"khao_he",th:"เขา",rom:"khǎo",en:"he / she",tone:"rising",day:1,cat:"People"},
-  {id:"rao",th:"เรา",rom:"rao",en:"we",tone:"mid",day:1,cat:"People"},
-  {id:"gin",th:"กิน",rom:"gin",en:"eat",tone:"mid",day:1,cat:"Verbs"},
-  {id:"deum",th:"ดื่ม",rom:"dèum",en:"drink",tone:"low",day:1,cat:"Verbs"},
-  {id:"ao",th:"เอา",rom:"ao",en:"want / take",tone:"mid",day:1,cat:"Verbs"},
-  {id:"yaak",th:"อยาก",rom:"yàak",en:"want to (+verb)",tone:"low",day:1,cat:"Verbs"},
-  {id:"bpai",th:"ไป",rom:"bpai",en:"go",tone:"mid",day:1,cat:"Verbs"},
-  {id:"mii",th:"มี",rom:"mii",en:"have",tone:"mid",day:1,cat:"Verbs"},
+  {id:"phom",th:"ผม",rom:"phǒm",en:"I / me (men)",tone:"rising",day:1,cat:"People",g:{pos:"pron",s:"I",o:"me",be:"am",n:1}},
+  {id:"khun",th:"คุณ",rom:"khun",en:"you",tone:"mid",day:1,cat:"People",g:{pos:"pron",s:"you",o:"you",be:"are",n:2}},
+  {id:"khao_he",th:"เขา",rom:"khǎo",en:"he / she",tone:"rising",day:1,cat:"People",g:{pos:"pron",s:"he|she",o:"him|her",be:"is",n:3}},
+  {id:"rao",th:"เรา",rom:"rao",en:"we",tone:"mid",day:1,cat:"People",g:{pos:"pron",s:"we",o:"us",be:"are",n:2}},
+  {id:"gin",th:"กิน",rom:"gin",en:"eat",tone:"mid",day:1,cat:"Verbs",g:{pos:"v",en:"eat",obj:["food","dem"],asp:"any",at:1,with:1,maak:1}},
+  {id:"deum",th:"ดื่ม",rom:"dèum",en:"drink",tone:"low",day:1,cat:"Verbs",g:{pos:"v",en:"drink",obj:["drink","dem"],asp:"any",at:1,with:1,maak:1}},
+  {id:"ao",th:"เอา",rom:"ao",en:"want / take",tone:"mid",day:1,cat:"Verbs",g:{pos:"v",en:"want",obj:["food","drink","thing","dem"],asp:"simple",it:1,art:"a",comp:0}},
+  {id:"yaak",th:"อยาก",rom:"yàak",en:"want to (+verb)",tone:"low",day:1,cat:"Verbs",g:{pos:"aux"}},
+  {id:"bpai",th:"ไป",rom:"bpai",en:"go",tone:"mid",day:1,cat:"Verbs",g:{pos:"v",en:"go",dest:"away",asp:"prog",with:1}},
+  {id:"mii",th:"มี",rom:"mii",en:"have",tone:"mid",day:1,cat:"Verbs",g:{pos:"v",en:"have",obj:["food","drink","thing"],asp:"simple",it:1,art:"a"}},
   {id:"mai_not",th:"ไม่",rom:"mâi",en:"not / no",tone:"falling",day:1,cat:"Glue"},
   {id:"mai_q",th:"ไหม",rom:"mǎi",en:"(yes/no question marker)",alt:["question","question marker","question particle","yes no question"],tone:"rising",day:1,cat:"Glue"},
   // Day 2
-  {id:"khao_rice",th:"ข้าว",rom:"khâao",en:"rice / meal",tone:"falling",day:2,cat:"Things"},
-  {id:"naam",th:"น้ำ",rom:"náam",en:"water",tone:"high",day:2,cat:"Things"},
-  {id:"nii",th:"นี่",rom:"nîi",en:"this / this one",tone:"falling",day:2,cat:"Glue"},
-  {id:"nan",th:"นั่น",rom:"nân",en:"that / that one",tone:"falling",day:2,cat:"Glue"},
-  {id:"chorp",th:"ชอบ",rom:"chôrp",en:"like",tone:"falling",day:2,cat:"Verbs"},
-  {id:"maa",th:"มา",rom:"maa",en:"come",tone:"mid",day:2,cat:"Verbs"},
+  {id:"khao_rice",th:"ข้าว",rom:"khâao",en:"rice / meal",tone:"falling",day:2,cat:"Things",g:{pos:"n",cls:["food"],a:"rice",the:"the rice"}},
+  {id:"naam",th:"น้ำ",rom:"náam",en:"water",tone:"high",day:2,cat:"Things",g:{pos:"n",cls:["drink"],a:"water",the:"the water"}},
+  {id:"nii",th:"นี่",rom:"nîi",en:"this / this one",tone:"falling",day:2,cat:"Glue",g:{pos:"dem",en:"this"}},
+  {id:"nan",th:"นั่น",rom:"nân",en:"that / that one",tone:"falling",day:2,cat:"Glue",g:{pos:"dem",en:"that"}},
+  {id:"chorp",th:"ชอบ",rom:"chôrp",en:"like",tone:"falling",day:2,cat:"Verbs",g:{pos:"v",en:"like",obj:["food","drink","thing","loc","person","dem"],asp:"simple",it:1,vp:1,maak:"any",comp:0}},
+  {id:"maa",th:"มา",rom:"maa",en:"come",tone:"mid",day:2,cat:"Verbs",g:{pos:"v",en:"come",dest:"toward",asp:"prog",with:1}},
   {id:"thii",th:"ที่",rom:"thîi",en:"at / place",tone:"falling",day:2,cat:"Glue"},
   {id:"thiinai",th:"ที่ไหน",rom:"thîi-nǎi",en:"where",tone:"falling+rising",day:2,cat:"Questions"},
-  {id:"thiinii",th:"ที่นี่",rom:"thîi-nîi",en:"here",tone:"falling+falling",day:2,cat:"Glue"},
-  {id:"thiinan",th:"ที่นั่น",rom:"thîi-nân",en:"there",tone:"falling+falling",day:2,cat:"Glue"},
+  {id:"thiinii",th:"ที่นี่",rom:"thîi-nîi",en:"here",tone:"falling+falling",day:2,cat:"Glue",g:{pos:"loc",en:"here",prox:1}},
+  {id:"thiinan",th:"ที่นั่น",rom:"thîi-nân",en:"there",tone:"falling+falling",day:2,cat:"Glue",g:{pos:"loc",en:"there"}},
   {id:"maak",th:"มาก",rom:"mâak",en:"very / a lot",tone:"falling",day:2,cat:"Glue"},
   // Day 3
   {id:"khrap",th:"ครับ",rom:"khráp",en:"polite particle (men)",alt:["polite particle","particle"],tone:"high",day:3,cat:"Polite"},
   {id:"khopkhun",th:"ขอบคุณ",rom:"khòp-khun",en:"thank you",alt:["thanks"],tone:"low+mid",day:3,cat:"Polite"},
   {id:"kho",th:"ขอ",rom:"khǒ",en:"may I have / I'd like",alt:["please give","can i have","i would like","request"],tone:"rising",day:3,cat:"Polite"},
   {id:"thaorai",th:"เท่าไหร่",rom:"thâo-rài",en:"how much?",tone:"falling+low",day:3,cat:"Questions"},
-  {id:"aroi",th:"อร่อย",rom:"à-ròi",en:"delicious",alt:["tasty","yummy"],tone:"low+low",day:3,cat:"Describe"},
-  {id:"phet",th:"เผ็ด",rom:"phèt",en:"spicy",alt:["hot spicy"],tone:"low",day:3,cat:"Describe"},
+  {id:"aroi",th:"อร่อย",rom:"à-ròi",en:"delicious",alt:["tasty","yummy"],tone:"low+low",day:3,cat:"Describe",g:{pos:"adj",en:"delicious",of:["food","drink"]}},
+  {id:"phet",th:"เผ็ด",rom:"phèt",en:"spicy",alt:["hot spicy"],tone:"low",day:3,cat:"Describe",g:{pos:"adj",en:"spicy",of:["food"]}},
   {id:"neung",th:"หนึ่ง",rom:"nèung",en:"one",alt:["1"],tone:"low",day:3,cat:"Numbers"},
   {id:"sawng",th:"สอง",rom:"sǎwng",en:"two",alt:["2"],tone:"rising",day:3,cat:"Numbers"},
   // Day 4
@@ -294,18 +296,18 @@ const WORDS = [
   {id:"haa",th:"ห้า",rom:"hâa",en:"five",alt:["5"],tone:"falling",day:4,cat:"Numbers"},
   {id:"gap",th:"กับ",rom:"gàp",en:"and / with",tone:"low",day:4,cat:"Glue"},
   {id:"reu",th:"หรือ",rom:"rʉ̌ʉ (reu)",en:"or",tone:"rising",day:4,cat:"Glue"},
-  {id:"dai",th:"ได้",rom:"dâi",en:"can / able to",alt:["able","ok","okay","possible"],tone:"falling",day:4,cat:"Verbs"},
-  {id:"ruu",th:"รู้",rom:"rúu",en:"know",tone:"high",day:4,cat:"Verbs"},
-  {id:"duu",th:"ดู",rom:"duu",en:"see / look",alt:["watch"],tone:"mid",day:4,cat:"Verbs"},
+  {id:"dai",th:"ได้",rom:"dâi",en:"can / able to",alt:["able","ok","okay","possible"],tone:"falling",day:4,cat:"Verbs",g:{pos:"aux"}},
+  {id:"ruu",th:"รู้",rom:"rúu",en:"know",tone:"high",day:4,cat:"Verbs",g:{pos:"v",en:"know",obj:[],asp:"simple",nowh:1}},
+  {id:"duu",th:"ดู",rom:"duu",en:"see / look",alt:["watch"],tone:"mid",day:4,cat:"Verbs",g:{pos:"v",en:"look",t:"look at",obj:["thing","dem","person"],asp:"any",it:1}},
   // Day 5
-  {id:"yuu",th:"อยู่",rom:"yùu",en:"to be (located) / at",alt:["is located","located","be located","is at","to be at","stay","live"],tone:"low",day:5,cat:"Verbs"},
-  {id:"raan",th:"ร้าน",rom:"ráan",en:"shop / restaurant",alt:["store"],tone:"high",day:5,cat:"Places"},
-  {id:"hongnaam",th:"ห้องน้ำ",rom:"hông-náam",en:"bathroom / toilet",alt:["restroom","washroom","wc"],tone:"falling+high",day:5,cat:"Places"},
-  {id:"rot",th:"รถ",rom:"rót",en:"car",alt:["vehicle"],tone:"high",day:5,cat:"Things"},
-  {id:"aahaan",th:"อาหาร",rom:"aa-hǎan",en:"food",alt:["meal","dish"],tone:"mid+rising",day:5,cat:"Things"},
-  {id:"dii",th:"ดี",rom:"dii",en:"good",alt:["fine","well","nice"],tone:"mid",day:5,cat:"Describe"},
-  {id:"suay",th:"สวย",rom:"sǔay",en:"beautiful / pretty",alt:["pretty","lovely"],tone:"rising",day:5,cat:"Describe"},
-  {id:"wannii",th:"วันนี้",rom:"wan-níi",en:"today",tone:"mid+high",day:5,cat:"Time"},
+  {id:"yuu",th:"อยู่",rom:"yùu",en:"to be (located) / at",alt:["is located","located","be located","is at","to be at","stay","live"],tone:"low",day:5,cat:"Verbs",g:{pos:"aux"}},
+  {id:"raan",th:"ร้าน",rom:"ráan",en:"shop / restaurant",alt:["store"],tone:"high",day:5,cat:"Places",g:{pos:"n",cls:["place"],a:"a shop",the:"the shop",at:"at the shop",to:"to the shop"}},
+  {id:"hongnaam",th:"ห้องน้ำ",rom:"hông-náam",en:"bathroom / toilet",alt:["restroom","washroom","wc"],tone:"falling+high",day:5,cat:"Places",g:{pos:"n",cls:["place"],a:"a bathroom",the:"the bathroom",at:"in the bathroom",to:"to the bathroom",holds:["person"]}},
+  {id:"rot",th:"รถ",rom:"rót",en:"car",alt:["vehicle"],tone:"high",day:5,cat:"Things",g:{pos:"n",cls:["thing"],a:"a car",the:"the car"}},
+  {id:"aahaan",th:"อาหาร",rom:"aa-hǎan",en:"food",alt:["meal","dish"],tone:"mid+rising",day:5,cat:"Things",g:{pos:"n",cls:["food"],a:"food",the:"the food"}},
+  {id:"dii",th:"ดี",rom:"dii",en:"good",alt:["fine","well","nice"],tone:"mid",day:5,cat:"Describe",g:{pos:"adj",en:"good",of:["food","drink","thing","place"]}},
+  {id:"suay",th:"สวย",rom:"sǔay",en:"beautiful / pretty",alt:["pretty","lovely"],tone:"rising",day:5,cat:"Describe",g:{pos:"adj",en:"beautiful",of:["thing","place","person"]}},
+  {id:"wannii",th:"วันนี้",rom:"wan-níi",en:"today",tone:"mid+high",day:5,cat:"Time",g:{pos:"time",en:"today"}},
   // Day 6 — question words (completes who / what / where / when / why / how / how much)
   {id:"tammai",th:"ทำไม",rom:"tam-mai",en:"why",tone:"mid+mid",day:6,cat:"Questions"},
   {id:"yangngai",th:"ยังไง",rom:"yang-ngai (yàang-rai)",en:"how",alt:["how (casual)"],tone:"mid+mid",day:6,cat:"Questions"},
@@ -315,46 +317,7 @@ const WORDS = [
 ];
 const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
 
-// Sentences for the Build tab: English + ordered word ids (all from the bank).
-const SENTENCES = [
-  {en:"I want to eat rice.",ids:["phom","yaak","gin","khao_rice"]},
-  {en:"Do you like water?",ids:["khun","chorp","naam","mai_q"]},
-  {en:"This is very delicious.",ids:["nii","aroi","maak"]},
-  {en:"I don't eat spicy food.",ids:["phom","mai_not","gin","phet"]},
-  {en:"Where are you going?",ids:["khun","bpai","thiinai"]},
-  {en:"I don't know.",ids:["phom","mai_not","ruu"]},
-  {en:"I like it here a lot.",ids:["phom","chorp","thiinii","maak"]},
-  {en:"Is he coming here?",ids:["khao_he","maa","thiinii","mai_q"]},
-  {en:"Can I drink water?",ids:["phom","deum","naam","dai","mai_q"]},
-  {en:"Thank you very much.",ids:["khopkhun","maak","khrap"]},
-  {en:"How much is this?",ids:["nii","thaorai","khrap"]},
-  {en:"May I have rice, please.",ids:["kho","khao_rice","khrap"]},
-  {en:"We have water and rice.",ids:["rao","mii","naam","gap","khao_rice"]},
-  {en:"Do you want to go?",ids:["khun","yaak","bpai","mai_q"]},
-  {en:"Is that spicy?",ids:["nan","phet","mai_q"]},
-  {en:"I can't go.",ids:["phom","bpai","mai_not","dai"]},
-  {en:"He eats a lot.",ids:["khao_he","gin","maak"]},
-  {en:"Come here!",ids:["maa","thiinii"]},
-  {en:"Not spicy, please.",ids:["mai_not","phet","khrap"]},
-  {en:"Do you know him?",ids:["khun","ruu","mai_q"]},
-  {en:"Where's the bathroom?",ids:["hongnaam","yuu","thiinai","khrap"]},
-  {en:"Where's a restaurant?",ids:["raan","aahaan","yuu","thiinai","khrap"]},
-  {en:"This food is very good.",ids:["aahaan","nii","dii","maak"]},
-  {en:"Where's the car?",ids:["rot","yuu","thiinai"]},
-  {en:"The food's really delicious.",ids:["aahaan","aroi","maak","khrap"]},
-  {en:"Is the food good today?",ids:["wannii","aahaan","dii","mai_q"]},
-  {en:"What is this?",ids:["nii","arai","khrap"]},
-  {en:"What do you want?",ids:["khun","ao","arai"]},
-  {en:"What are you eating?",ids:["khun","gin","arai"]},
-  {en:"Who is he?",ids:["khao_he","khrai"]},
-  {en:"Who's coming?",ids:["khrai","maa"]},
-  {en:"When are you going?",ids:["khun","bpai","meuarai"]},
-  {en:"When is he coming?",ids:["khao_he","maa","meuarai"]},
-  {en:"Why are you going?",ids:["tammai","khun","bpai"]},
-  {en:"Why don't you eat?",ids:["tammai","khun","mai_not","gin"]},
-  {en:"How do I go?",ids:["phom","bpai","yangngai"]},
-  {en:"How do I eat this?",ids:["nii","gin","yangngai"]},
-];
+// Sentences for the Build tab are generated on the fly from the tagged bank — see SENTENCE GENERATOR below.
 
 // Sentence patterns for the Build → Patterns drill. "_" marks the slot; fills are words from the bank.
 const PATTERNS = [
@@ -404,7 +367,7 @@ const TONES = [
 //  STATE & STORAGE
 // =====================================================================
 const KEY="thai-vocab-v2";
-const DEFAULT_SETTINGS={rate:0.8,autoplay:true,goal:20,distractor:true,hard:false,reviewOld:10};
+const DEFAULT_SETTINGS={rate:0.8,autoplay:true,goal:20,distractor:true,hard:false,reviewOld:10,focusDay:0}; // focusDay: Build tab favours words of this day (0 = any)
 // Stats are kept per word AND per direction:  th = EN → Thai (produce the Thai word),  en = Thai → EN (recognise it).
 // A word is only "solid" once it is solid in both directions.
 const DIRS=["th","en"];
@@ -528,7 +491,7 @@ function checkEn(w,input){
 let mode="practice";
 let P={sub:"type",userSub:"type",filter:"All",scope:null,day:null,dayOpen:false,cur:null,phase:"ask",verdict:null,hint:0,session:{n:0,right:0},done:false,tq:null,noteEdit:false,heard:null,heardOk:false,listening:false,toneMiss:false};
 let L={view:"cards",day:"All",q:"",idx:0,flipped:false};
-let B={view:"tiles",cur:null,order:[],picked:[],phase:"ask",tiles:[],right:0,n:0,marks:null,typed:"",hint:0,pat:null,fill:null,pv:null,pn:0,pright:0,patOpen:false};
+let B={view:"tiles",cur:null,recent:[],recentFrames:[],picked:[],phase:"ask",tiles:[],right:0,n:0,marks:null,typed:"",hint:0,pat:null,fill:null,pv:null,pn:0,pright:0,patOpen:false};
 let T={cur:null,phase:"ask",pick:null,right:0,n:0,filter:"all",last:null};
 const $=id=>document.getElementById(id);
 const stage=()=>$('stage');
@@ -838,17 +801,227 @@ function bindLearn(){
 }
 
 // ---------------------------------------------------------------------
+//  SENTENCE GENERATOR  (feeds Build → Tiles / Type it)
+//  Nothing is stored: every "Next" builds a fresh pool of candidate
+//  sentences from the tagged word bank, translates them, and picks the
+//  one that fits your progress best (unseen, missed, due / weak / newest
+//  words; no recent repeats).  Progress stays keyed by the word ids.
+// ---------------------------------------------------------------------
+const CAT_POS={Verbs:"v",Things:"n",Places:"n",People:"n",Describe:"adj",Time:"time"};
+function G(w){ // grammar tag of a word: a guess from its category, overridden by w.g
+  if(w._g) return w._g;
+  const en=w.en.split('/')[0].replace(/\(.*?\)/g,'').trim().toLowerCase();
+  const pos=CAT_POS[w.cat]||"x"; let g={pos,en};
+  if(pos==='n'){ const cls=w.cat==='Places'?'place':w.cat==='People'?'person':'thing'; const a=(/^[aeiou]/.test(en)?'an ':'a ')+en; g={pos,cls:[cls],a,the:'the '+en,at:'at the '+en,to:'to the '+en}; }
+  if(pos==='v') g={pos,en,obj:[],asp:'any'};
+  if(pos==='adj') g={pos,en,of:[]};
+  w._g={...g,...(w.g||{})}; if(!w._g.obj) w._g.obj=[]; if(!w._g.cls) w._g.cls=[]; if(!w._g.of) w._g.of=[]; return w._g;
+}
+const pk=a=>a.length?a[Math.floor(Math.random()*a.length)]:null;
+const chance=p=>Math.random()<p;
+const has=id=>!!BY_ID[id];
+const POS=p=>WORDS.filter(w=>G(w).pos===p);
+const PRONS=()=>POS('pron');
+const OTHERS=()=>PRONS().filter(p=>G(p).n!==1);           // you / he / we — subjects you can ask about
+const TELLERS=()=>PRONS().filter(p=>G(p).s!=='you');       // I / he / we — subjects that make natural statements
+const fpg=w=>!!w&&(G(w).n===1||G(w).s==='we');            // first-person group (I / we) — never 'we … with me'
+const DYN=()=>POS('v').filter(v=>G(v).asp!=='simple');    // action verbs (eat, go, look…) vs states (like, have, know)
+const DESTS=dir=>[...POS('loc').filter(l=>dir==='away'?!G(l).prox:dir==='toward'?G(l).prox:true),...POS('n').filter(n=>G(n).cls.includes('place'))];
+// ---- English morphology & clause builder
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function enS3(v){ const [h,...r]=v.split(' '); let f; if(h==='have') f='has'; else if(h==='do') f='does'; else if(/(s|sh|ch|x|z|o)$/.test(h)) f=h+'es'; else if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ies'; else f=h+'s'; return [f,...r].join(' '); }
+function enIng(v){ const [h,...r]=v.split(' '); let f; if(/ie$/.test(h)) f=h.slice(0,-2)+'ying'; else if(/[^e]e$/.test(h)) f=h.slice(0,-1)+'ing'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ing'; else f=h+'ing'; return [f,...r].join(' '); }
+const CONTR={I:"I'm",you:"you're",he:"he's",she:"she's",we:"we're",they:"they're",it:"it's"};
+const contr=sb=>CONTR[sb.s]||`${sb.s} ${sb.be}`;
+function subjOf(w){ // English subject descriptor {id,s,o,be,n} for a pronoun / noun / demonstrative
+  const g=G(w);
+  if(g.pos==='pron'){ const ss=g.s.split('|'), os=(g.o||g.s).split('|'), i=Math.floor(Math.random()*ss.length); return {id:w.id,s:ss[i],o:os[i]||os[0],be:g.be,n:g.n}; }
+  if(g.pos==='dem') return {id:w.id,s:g.en,o:g.en,be:'is',n:3};
+  return {id:w.id,s:g.the||g.en,o:g.the||g.en,be:'is',n:3};
+}
+const WHO=()=>({id:'khrai',s:'who',o:'who',be:'is',n:3});
+// vp = {be:1,rest} | {modal:'can',head,rest} | {head,asp:'simple'|'prog',rest};  o = {mood:'stmt'|'yn'|'wh', wh, neg, tail, q}
+function enClause(sb,vp,o={}){
+  const S=sb.s, be=sb.be, n3=sb.n===3, mood=o.mood||'stmt', rest=vp.rest?' '+vp.rest:'', tail=o.tail?' '+o.tail:'';
+  let t;
+  if(vp.be){
+    if(mood==='stmt') t=o.neg?(CONTR[S]?`${CONTR[S]} not${rest}`:`${S} ${be==='is'?"isn't":"aren't"}${rest}`):`${contr(sb)}${rest}`;
+    else if(mood==='yn') t=`${be} ${S}${rest}`;
+    else t=`${o.wh}${be==='is'&&!/ /.test(o.wh)?"'s":' '+be} ${S}${rest}`;
+  } else if(vp.modal){
+    const m=o.neg?"can't":'can';
+    if(mood==='stmt') t=`${S} ${m} ${vp.head}${rest}`;
+    else if(mood==='yn') t=`${m} ${S} ${vp.head}${rest}`;
+    else t=`${o.wh} ${m} ${S} ${vp.head}${rest}`;
+  } else if(vp.asp==='prog' && !(o.neg && (mood==='yn' || (mood==='wh' && be==='am')))){
+    const ing=enIng(vp.head);
+    if(mood==='stmt') t=`${contr(sb)} ${o.neg?'not ':''}${ing}${rest}`;
+    else if(mood==='yn') t=`${be} ${S} ${ing}${rest}`;
+    else t=`${o.wh} ${be}${o.neg?"n't":''} ${S} ${ing}${rest}`;
+  } else {
+    const d=n3?'does':'do';
+    if(mood==='stmt') t=o.neg?`${S} ${d}n't ${vp.head}${rest}`:`${S} ${n3?enS3(vp.head):vp.head}${rest}`;
+    else if(mood==='yn') t=`${d} ${S} ${vp.head}${rest}`;
+    else t=`${o.wh} ${d}${o.neg?"n't":''} ${S} ${vp.head}${rest}`;
+  }
+  return cap(t+tail)+(mood==='stmt'&&!o.q?'.':'?');
+}
+// ---- Thai phrase builders
+function objFor(v,sb){ // an object that verb v can take: {ids,en}
+  const g=G(v), want=g.obj, opts=[];
+  POS('n').forEach(n=>{ const gn=G(n); if(gn.cls.some(c=>want.includes(c))) opts.push({ids:[n.id],en:(g.art==='a'||gn.cls.some(c=>c==='food'||c==='drink'))?gn.a:gn.the,cls:gn.cls}); });
+  if(want.includes('dem')) POS('dem').forEach(d=>opts.push({ids:[d.id],en:G(d).en}));
+  if(want.includes('person')) PRONS().forEach(p=>{ if(p.id!==sb.id && !(fpg(p)&&fpg(BY_ID[sb.id]))) opts.push({ids:[p.id],en:subjOf(p).o}); });
+  if(want.includes('loc')) POS('loc').forEach(l=>opts.push({ids:[l.id],en:'it '+G(l).en}));
+  const o=pk(opts); if(!o) return null;
+  if(o.cls && has('gap') && chance(.12)){ // "rice and water"
+    const b=pk(opts.filter(x=>x.cls && x.ids[0]!==o.ids[0] && x.cls[0]!==o.cls[0]));
+    if(b) return {ids:[o.ids[0],'gap',b.ids[0]],en:`${o.en} and ${b.en}`};
+  }
+  return o;
+}
+// Verb phrase (Thai ids after the subject + English pieces). opt: noAdj, noDest, wh:'arai'|'khrai'|'thiinai'|'gapkhrai'
+function vpOf(v,sb,opt={}){
+  const g=G(v), ids=[v.id], rest=[]; let head=g.en, obj=null;
+  const asp=g.asp==='any'?(chance(.5)?'prog':'simple'):g.asp;
+  if(opt.wh==='arai'||opt.wh==='khrai'){ if(!g.obj.length || (opt.wh==='khrai'&&!g.obj.includes('person'))) return null; ids.push(opt.wh); head=g.t||g.en; }
+  else if(!opt.noObj && g.obj.length && chance(.8)){ obj=objFor(v,sb); if(obj){ ids.push(...obj.ids); head=g.t||g.en; rest.push(obj.en); } }
+  if(!obj && !ids.includes('arai') && !ids.includes('khrai') && g.it){ head=g.t||g.en; rest.push('it'); }
+  if(g.dest){ if(opt.wh==='thiinai') ids.push('thiinai'); else if(!opt.noDest && (opt.needDest||chance(.6))){ const d=pk(DESTS(g.dest)); if(d){ ids.push(d.id); rest.push(G(d).to||G(d).en); } else if(opt.needDest) return null; } }
+  else if(opt.wh==='thiinai'){ if(!g.at) return null; ids.push('thiinai'); }
+  if(opt.wh==='gapkhrai'){ if(!g.with||!has('gap')) return null; ids.push('gap','khrai'); rest.push('with'); }
+  if(!opt.wh && !opt.noAdj){ const r=Math.random();
+    if(g.at && r<.15){ const p=pk(DESTS()); if(p){ if(G(p).pos==='loc'){ ids.push(p.id); rest.push(G(p).en); } else if(has('thii')){ ids.push('thii',p.id); rest.push(G(p).at); } } }
+    else if(g.with && r<.3){ const c=pk(PRONS().filter(p=>p.id!==sb.id&&!ids.includes(p.id)&&!(fpg(p)&&fpg(BY_ID[sb.id])))); if(c&&has('gap')){ ids.push('gap',c.id); rest.push('with '+subjOf(c).o); } }
+    else if(g.maak && r<.42 && has('maak') && (g.maak==='any'||!obj)){ ids.push('maak'); rest.push('a lot'); }
+  }
+  return {ids,head,rest:rest.join(' '),asp,dyn:g.asp!=='simple',any:g.asp==='any'};
+}
+function clause(sb,vp,o,ids,extra){ // optional "wan-níi … / … today"
+  ids=ids.slice(); o={...o};
+  if(has('wannii') && vp.dyn && !o.noTime && chance(.1)){ ids.unshift('wannii'); o.tail='today'; if(vp.any) vp={...vp,asp:'prog'}; }
+  return {ids,en:enClause(sb,vp,o),...(extra||{})};
+}
+const wantVP=(vp,tail)=>({head:'want',asp:'simple',rest:('to '+vp.head+(vp.rest?' '+vp.rest:'')+(tail||'')).trim(),dyn:true}); // "want to eat rice"
+const compVerbs=()=>POS('v').filter(v=>G(v).comp!==0);   // verbs usable after yàak / chôrp
+const TIP={mai_q:"mǎi turns a statement into a yes/no question — it always goes at the end",mai_not:"mâi (falling) goes right before the verb or adjective",
+  yaak:"yàak + verb = want to; the verb (and its object) follow directly",dai:"dâi = can/able — it comes AFTER the verb, and mǎi after that",
+  adj:"Thai adjectives are verbs: no 'is' between the noun and the adjective; mâak = 'very' comes after",yuu:"yùu = 'is located' — thing + yùu + place",
+  wh:"Thai question words stay in the slot they ask about — no word-order flip", tammai:"tam-mai (why) sits at the FRONT; the rest of the sentence keeps its order",
+  yangngai:"yang-ngai (how) goes at the END", kho:"khǒ + thing + khráp = the polite way to ask for something", exist:"place + mii + thing = there is … (mii doubles as 'there is/are')",
+  or:"rʉ̌ʉ = or; an A-or-B question needs no mǎi", imp:"An order is just the bare verb — Thai drops the subject", with:"gàp = with / and — it joins two things or adds a companion after the verb"};
+// ---- Frames.  Each gen() returns {ids, en, tip?} or null when the bank can't fill it.
+const FRAMES=[
+  {id:'svo',w:5,gen(){ const v=pk(POS('v')), sb=subjOf(pk(chance(.75)?TELLERS():PRONS())); if(!v||!sb) return null; const r=Math.random();
+    if(r<.55){ const vp=vpOf(v,sb); return vp&&clause(sb,vp,{mood:'stmt'},[sb.id,...vp.ids],{tip:vp.ids.includes('gap')?TIP.with:null}); }
+    if(r<.8){ const vp=vpOf(v,sb,{noAdj:true}); return vp&&clause(sb,vp,{mood:'stmt',neg:true},[sb.id,'mai_not',...vp.ids],{tip:TIP.mai_not}); }
+    const s2=subjOf(pk(OTHERS())); if(!s2) return null; const vp=vpOf(v,s2); return vp&&clause(s2,vp,{mood:'yn'},[s2.id,...vp.ids,'mai_q'],{tip:TIP.mai_q}); }},
+  {id:'yaak',w:4,gen(){ const v=pk(compVerbs()); if(!v) return null; const r=Math.random(), sb=subjOf(pk(r<.6?PRONS():OTHERS())); if(!sb) return null;
+    const vp=vpOf(v,sb,{noAdj:chance(.5)}); if(!vp) return null; const W=wantVP(vp);
+    if(r<.4) return clause(sb,W,{mood:'stmt'},[sb.id,'yaak',...vp.ids],{tip:TIP.yaak});
+    if(r<.6) return clause(sb,W,{mood:'stmt',neg:true},[sb.id,'mai_not','yaak',...vp.ids],{tip:TIP.mai_not});
+    if(r<.8) return clause(sb,W,{mood:'yn'},[sb.id,'yaak',...vp.ids,'mai_q'],{tip:TIP.mai_q});
+    const wh=pk([['thiinai','Where'],['meuarai','When'],['arai','What'],['tammai','Why'],['gapkhrai','Who']]);
+    if(wh[0]==='tammai') return clause(sb,W,{mood:'wh',wh:'Why',noTime:true},['tammai',sb.id,'yaak',...vp.ids],{tip:TIP.tammai});
+    if(wh[0]==='meuarai'){ if(!vp.dyn) return null; return clause(sb,W,{mood:'wh',wh:'When'},[sb.id,'yaak',...vp.ids,'meuarai'],{tip:TIP.wh}); }
+    const vq=vpOf(v,sb,{wh:wh[0],noAdj:true}); if(!vq) return null; return clause(sb,wantVP(vq),{mood:'wh',wh:wh[1]},[sb.id,'yaak',...vq.ids],{tip:TIP.wh}); }},
+  {id:'like_vp',w:1.5,gen(){ const like=POS('v').find(v=>G(v).vp), v=pk(DYN().filter(x=>G(x).comp!==0)); if(!like||!v) return null; const yn=chance(.4), sb=subjOf(pk(yn?OTHERS():PRONS())); if(!sb) return null;
+    const vp=vpOf(v,sb,{noAdj:true,needDest:true}); if(!vp) return null; const L={head:G(like).en,asp:'simple',rest:enIng(vp.head)+(vp.rest?' '+vp.rest:''),dyn:false};
+    return yn?clause(sb,L,{mood:'yn'},[sb.id,like.id,...vp.ids,'mai_q'],{tip:TIP.mai_q}):clause(sb,L,{mood:'stmt'},[sb.id,like.id,...vp.ids]); }},
+  {id:'dai',w:3,gen(){ const v=pk(DYN()), sb=subjOf(pk(PRONS())); if(!v||!sb) return null; const vp=vpOf(v,sb,{noAdj:chance(.5)}); if(!vp) return null;
+    const M={modal:'can',head:vp.head,rest:vp.rest,dyn:true}, r=Math.random();
+    if(r<.3) return clause(sb,M,{mood:'stmt'},[sb.id,...vp.ids,'dai'],{tip:TIP.dai});
+    if(r<.55) return clause(sb,M,{mood:'stmt',neg:true},[sb.id,...vp.ids,'mai_not','dai'],{tip:"mâi dâi = can't — both come after the verb"});
+    return clause(sb,M,{mood:'yn'},[sb.id,...vp.ids,'dai','mai_q'],{tip:TIP.dai}); }},
+  {id:'adj',w:4,gen(){ const a=pk(POS('adj')); if(!a) return null; const g=G(a);
+    const subs=[...POS('dem'),...POS('n').filter(n=>G(n).cls.some(c=>g.of.includes(c))),...(g.of.includes('person')?PRONS().filter(p=>G(p).n!==1):[])];
+    const w=pk(subs); if(!w) return null; const sb=subjOf(w), dem=G(w).pos==='dem', r=Math.random(), very=has('maak')&&chance(.4);
+    const V={be:1,rest:(very?'very ':'')+g.en,dyn:!dem}, ids=[w.id,a.id,...(very?['maak']:[])];
+    if(r<.55) return clause(sb,V,{mood:'stmt'},ids,{tip:TIP.adj});
+    if(r<.75) return clause(sb,{be:1,rest:g.en,dyn:!dem},{mood:'stmt',neg:true},[w.id,'mai_not',a.id],{tip:TIP.mai_not});
+    if(G(w).pos==='pron') return null; return clause(sb,{be:1,rest:g.en,dyn:!dem},{mood:'yn'},[w.id,a.id,'mai_q'],{tip:TIP.mai_q}); }},
+  {id:'dem_n',w:1.5,gen(){ const d=pk(POS('dem')), n=pk(POS('n').filter(x=>!G(x).cls.includes('place'))); if(!d||!n) return null; return {ids:[d.id,n.id],en:`${cap(G(d).en)} is ${G(n).a}.`,tip:"No 'is' needed: nîi + noun = this is …"}; }},
+  {id:'loc',w:4,gen(){ if(!has('yuu')) return null; const w=pk([...PRONS(),...POS('n')]); if(!w) return null; const sb=subjOf(w), r=Math.random();
+    if(r<.3){ if(!has('thiinai')) return null; return clause(sb,{be:1,rest:'',dyn:true},{mood:'wh',wh:'Where'},[w.id,'yuu','thiinai'],{tip:TIP.yuu}); }
+    const p=pk(DESTS().filter(x=>x.id!==w.id && (G(x).pos==='loc' || (!G(w).cls.includes('place') && (!G(x).holds || G(x).holds.includes(G(w).pos==='pron'?'person':G(w).cls[0])))))); if(!p) return null; const isLoc=G(p).pos==='loc'; if(!isLoc&&!has('thii')) return null;
+    const pl=isLoc?[p.id]:['thii',p.id], V={be:1,rest:isLoc?G(p).en:G(p).at,dyn:true};
+    if(r<.6) return clause(sb,V,{mood:'stmt'},[w.id,'yuu',...pl],{tip:TIP.yuu});
+    if(r<.8) return clause(sb,V,{mood:'stmt',neg:true},[w.id,'mai_not','yuu',...pl],{tip:TIP.mai_not});
+    if(G(w).n===1) return null; return clause(sb,V,{mood:'yn'},[w.id,'yuu',...pl,'mai_q'],{tip:TIP.mai_q}); }},
+  {id:'wh',w:5,gen(){ const kind=pk(['arai','arai','thiinai','meuarai','tammai','tammai','khrai','gapkhrai']); if(!has(kind==='gapkhrai'?'khrai':kind)) return null;
+    if(kind==='tammai'){ const v=pk(POS('v').filter(x=>!G(x).nowh)), sb=subjOf(pk(OTHERS())); if(!v||!sb) return null; const neg=chance(.35), vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null;
+      return clause(sb,vp,{mood:'wh',wh:'Why',neg,noTime:true},['tammai',sb.id,...(neg?['mai_not']:[]),...vp.ids],{tip:TIP.tammai}); }
+    if(kind==='meuarai'){ const v=pk(DYN()), sb=subjOf(pk(OTHERS())); if(!v||!sb) return null; const vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null;
+      return clause(sb,vp,{mood:'wh',wh:'When',noTime:true},[sb.id,...vp.ids,'meuarai'],{tip:TIP.wh}); }
+    const v=pk(POS('v').filter(x=>!G(x).nowh)), sb=subjOf(pk(kind==='thiinai'?PRONS():OTHERS())); if(!v||!sb) return null;
+    const vp=vpOf(v,sb,{wh:kind}); if(!vp) return null; const wh={arai:'What',thiinai:'Where',khrai:'Who',gapkhrai:'Who'}[kind];
+    return clause(sb,vp,{mood:'wh',wh},[sb.id,...vp.ids],{tip:TIP.wh}); }},
+  {id:'how',w:2,gen(){ if(!has('yangngai')) return null; const v=pk(DYN().filter(x=>!G(x).it)); if(!v) return null; const withS=chance(.4), sw=withS?pk(PRONS()):null, sb=sw?subjOf(sw):{id:'phom',s:'I',o:'me',be:'am',n:1};
+    const vp=vpOf(v,sb,{noAdj:true,needDest:true}); if(!vp) return null; if(G(v).dest) vp.head='get';
+    return clause(sb,{...vp,asp:'simple'},{mood:'wh',wh:'How',noTime:true},[...(sw?[sw.id]:[]),...vp.ids,'yangngai'],{tip:TIP.yangngai}); }},
+  {id:'who',w:2,gen(){ if(!has('khrai')) return null; const r=Math.random();
+    if(r<.25){ const d=pk(POS('dem')); return d?{ids:[d.id,'khrai'],en:`Who is ${G(d).en}?`,tip:TIP.wh}:null; }
+    if(r<.4 && has('yuu')){ const p=pk(DESTS()); if(!p) return null; const isLoc=G(p).pos==='loc'; if(!isLoc&&!has('thii')) return null; return {ids:['khrai','yuu',...(isLoc?[p.id]:['thii',p.id])],en:`Who is ${isLoc?G(p).en:G(p).at}?`,tip:TIP.wh}; }
+    const v=pk(POS('v')), sb=WHO(); if(!v) return null; const useWant=has('yaak')&&G(v).comp!==0&&chance(.25); const vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null;
+    return useWant?clause(sb,wantVP(vp),{mood:'stmt',q:1},['khrai','yaak',...vp.ids],{tip:TIP.wh}):clause(sb,vp,{mood:'stmt',q:1},['khrai',...vp.ids],{tip:TIP.wh}); }},
+  {id:'what_this',w:1.5,gen(){ const d=pk(POS('dem')); if(!d) return null; if(has('thaorai')&&chance(.5)){ const w=pk([...POS('dem'),...POS('n').filter(n=>!G(n).cls.includes('place'))]); return {ids:[w.id,'thaorai'],en:`How much is ${G(w).pos==='dem'?G(w).en:G(w).the}?`,tip:"thâo-rài (how much) goes at the end"}; }
+    if(!has('arai')) return null; return {ids:[d.id,'arai'],en:`What is ${G(d).en}?`,tip:TIP.wh}; }},
+  {id:'kho',w:2,gen(){ if(!has('kho')||!has('khrap')) return null; const opts=[...POS('n').filter(n=>G(n).cls.some(c=>c==='food'||c==='drink')).map(n=>({ids:[n.id],en:G(n).a,cls:G(n).cls})),...POS('dem').map(d=>({ids:[d.id],en:G(d).en}))];
+    let o=pk(opts); if(!o) return null; if(o.cls&&has('gap')&&chance(.25)){ const b=pk(opts.filter(x=>x.cls&&x.cls[0]!==o.cls[0])); if(b) o={ids:[o.ids[0],'gap',b.ids[0]],en:`${o.en} and ${b.en}`}; }
+    return {ids:['kho',...o.ids,'khrap'],en:`May I have ${o.en}, please.`,tip:TIP.kho,polite:false}; }},
+  {id:'exist',w:2,gen(){ if(!has('mii')) return null; const l=pk(POS('loc')), n=pk(POS('n')); if(!l||!n) return null; const r=Math.random(), here=G(l).en, thing=G(n).a;
+    if(r<.5) return {ids:[l.id,'mii',n.id,'mai_q'],en:`Is there ${thing} ${here}?`,tip:TIP.exist};
+    if(r<.75) return {ids:[l.id,'mii',n.id],en:`There is ${thing} ${here}.`,tip:TIP.exist};
+    return {ids:[l.id,'mai_not','mii',n.id],en:`There's no ${thing.replace(/^an? /,'')} ${here}.`,tip:TIP.exist}; }},
+  {id:'or',w:1.5,gen(){ if(!has('reu')) return null; const sb=subjOf(pk(OTHERS())); if(!sb) return null;
+    if(chance(.35)){ const v=pk(POS('v')); if(!v) return null; const vp=vpOf(v,sb,{noAdj:true,noDest:true,noObj:true}); if(!vp||vp.ids.length!==1) return null;
+      const en=enClause(sb,{head:vp.head,asp:vp.asp,rest:vp.rest},{mood:'yn'}).replace(/\?$/,' or not?'); return {ids:[sb.id,v.id,'reu','mai_not',v.id],en,tip:TIP.or}; }
+    const v=pk(POS('v').filter(x=>G(x).obj.length>=2)); if(!v) return null; const a=objFor(v,sb), b=objFor(v,sb); if(!a||!b||a.ids.length>1||b.ids.length>1||a.ids[0]===b.ids[0]) return null; const ka=G(BY_ID[a.ids[0]]), kb=G(BY_ID[b.ids[0]]); const edible=g=>['food','drink'].includes(g.cls[0]); if(ka.pos!==kb.pos||(ka.pos!=='n'&&ka.pos!=='dem')||(ka.pos==='n'&&(ka.cls[0]===kb.cls[0]||!edible(ka)||!edible(kb)))) return null;
+    const vp={head:G(v).t||G(v).en,asp:'simple',rest:`${a.en} or ${b.en}`}; return {ids:[sb.id,v.id,a.ids[0],'reu',b.ids[0]],en:enClause(sb,vp,{mood:'yn'}),tip:TIP.or}; }},
+  {id:'imp',w:1.5,gen(){ const v=pk(DYN()); if(!v) return null; const g=G(v); if(!g.obj.length&&!g.dest) return null; const sb={id:'khun',s:'you',o:'you',be:'are',n:2};
+    const vp=vpOf(v,sb,{noAdj:true}); if(!vp||vp.ids.length<2||vp.rest==='it') return null; return {ids:vp.ids,en:cap(vp.head+' '+vp.rest)+'!',tip:TIP.imp,req:true}; }},
+  {id:'phrase',w:1.5,gen(){ const P=[
+      ['khopkhun','khrap','Thank you.'],['khopkhun','maak','khrap','Thank you very much.'],['mai_not','phet','khrap','Not spicy, please.'],['mai_not','ao','khrap',"No thanks, I don't want it."],
+      ['dai','khrap','Yes, I can.'],['mai_not','dai','khrap',"No, I can't."],['aroi','maak','khrap','Very delicious!'],['ao','khrap','Yes, please — I want it.'],['dii','maak','khrap','Very good!']];
+    const p=pk(P.filter(x=>x.slice(0,-1).every(has))); return p?{ids:p.slice(0,-1),en:p[p.length-1],polite:false}:null; }},
+];
+const sentKey=s=>s.key||s.ids.join('|');
+function finalizeSent(c){ // optional khráp at the end (English unchanged — the prompt shows a "+ khráp" hint), stable progress key
+  if(has('khrap') && !c.ids.includes('khrap') && c.polite!==false){ const q=/\?$/.test(c.en); if(chance(q?.3:c.req?.5:.1)){ c.ids=[...c.ids,'khrap']; if(c.req) c.en=c.en.replace(/[.!?]$/,m=>', please'+m); else c.polite=true; } }
+  c.key=c.ids.join('|'); return c;
+}
+function sentScore(c){
+  const r=S.sent[c.key]||{ok:0,bad:0}; let p=Math.random()*3+r.bad*2-r.ok*1.5+(r.ok+r.bad?0:1.5);
+  const nd=NEWEST_DAY(); let need=0;
+  [...new Set(c.ids)].forEach(id=>{ const w=BY_ID[id]; if(w.day===nd) need+=1.2; if(isDue(id)) need+=.8; if(isWeak(id)) need+=1; });
+  p+=Math.min(3.5,need);
+  const fd=S.settings.focusDay||0;
+  if(fd){ const f=[...new Set(c.ids)].filter(id=>BY_ID[id].day===fd && !(c.polite && id==='khrap')).length; c.focus=f; p+=f?3+1.5*Math.min(f,3):-6; }
+  if((B.recent||[]).includes(c.key)) p-=8; if((B.recentFrames||[]).includes(c.frame)) p-=1.5;
+  return p;
+}
+function genSentence(){
+  const rf=B.recentFrames||[], fd=S.settings.focusDay||0; const fr=FRAMES.map(f=>({f,w:f.w*(rf[0]===f.id?.08:rf.includes(f.id)?.35:1)}));
+  let best=null;
+  for(let tries=0;tries<(fd?16:8);tries++){ // pick a frame (weighted, avoiding recent ones), then the best of its fills; with a focus day, compare several frames
+    let r=Math.random()*fr.reduce((a,x)=>a+x.w,0), f=fr[fr.length-1].f; for(const x of fr){ r-=x.w; if(r<=0){ f=x.f; break; } }
+    const pool={};
+    for(let i=0;i<(fd?20:14);i++){ let c=null; try{ c=f.gen(); }catch(e){ c=null; } if(!c||!c.ids||c.ids.length<2||!c.ids.every(has)) continue; c.frame=f.id; finalizeSent(c); if(!pool[c.key]) pool[c.key]=c; }
+    const list=Object.values(pool); if(!list.length) continue;
+    list.forEach(c=>c.p=sentScore(c)); list.sort((a,b)=>b.p-a.p);
+    if(!best||list[0].p>best.p) best=list[0];
+    if(!fd || (tries>=5 && best.focus)) return best; // focus day: compare ≥6 frames, keep looking (up to 16) until one uses a focus word
+  }
+  return best;
+}
+// ---------------------------------------------------------------------
 //  BUILD (sentence builder: tiles · type it · patterns)
 // ---------------------------------------------------------------------
-function sentKey(s){ return s.ids.join('|'); }
-function pickSentence(){
-  const scored=SENTENCES.map((s,i)=>{ const r=S.sent[sentKey(s)]||{ok:0,bad:0}; return {i,p:Math.random()*3+r.bad*2-r.ok*1.5+(B.cur===i?-20:0)}; });
-  scored.sort((a,b)=>b.p-a.p); return scored[0].i;
-}
 function newSentence(){
-  B.cur=pickSentence(); const s=SENTENCES[B.cur];
+  const s=genSentence(); B.cur=s; if(!s) return;
+  B.recent=[s.key,...(B.recent||[])].slice(0,14); B.recentFrames=[s.frame,...(B.recentFrames||[])].slice(0,4);
   const tiles=s.ids.map((id,k)=>({id,k}));
-  if(S.settings.distractor){ const others=WORDS.filter(w=>!s.ids.includes(w.id)); const d=others[Math.floor(Math.random()*others.length)]; tiles.push({id:d.id,k:-1}); }
+  if(S.settings.distractor){ const others=WORDS.filter(w=>!s.ids.includes(w.id)); const d=others[Math.floor(Math.random()*others.length)]; if(d) tiles.push({id:d.id,k:-1}); }
   B.tiles=shuffle(tiles); B.picked=[]; B.phase="ask"; B.marks=null; B.typed="";
 }
 const sentTh=s=>s.ids.map(id=>BY_ID[id].th).join('');
@@ -861,7 +1034,7 @@ function matchSentence(ids,input){
     const t=raw.replace(/\s+/g,'').normalize('NFC'), want=ids.map(id=>BY_ID[id].th).join('').normalize('NFC');
     return ids.map(()=>t===want?"ok":"bad");
   }
-  let rem=skeleton(raw); const marks=[];
+  let rem=skeleton(raw); const marks=[]; let prev=""; // prev = last skeleton letter of the previous word
   for(const id of ids){
     const w=BY_ID[id]; const cands=[...new Set([...romAlts(w),w.rom].map(skeleton).filter(Boolean))].sort((a,b)=>b.length-a.length);
     let hit=null;
@@ -869,10 +1042,12 @@ function matchSentence(ids,input){
       for(const c of cands){
         const seg=rem.slice(k,k+c.length);
         if(seg===c){ hit={k,len:c.length,q:k?"close":"ok"}; break; }
+        // skeleton() collapses doubled letters, also across words ("yàak gin" → "yakin"): the word may share its first letter with the previous one
+        if(k===0 && prev===c[0] && rem.slice(0,c.length-1)===c.slice(1)){ hit={k:0,len:c.length-1,q:"ok"}; break; }
         if(c.length>=4 && seg.length===c.length && lev(seg,c)<=1){ hit={k,len:c.length,q:"close"}; break; }
       }
     }
-    if(hit){ rem=rem.slice(hit.k+hit.len); marks.push(hit.q); } else marks.push("bad");
+    if(hit){ prev=rem[hit.k+hit.len-1]||prev; rem=rem.slice(hit.k+hit.len); marks.push(hit.q); } else { marks.push("bad"); prev=""; }
   }
   if(rem.length>3 && marks.length) marks[marks.length-1]=marks[marks.length-1]==="ok"?"close":marks[marks.length-1]; // trailing junk
   return marks;
@@ -889,15 +1064,17 @@ function renderBuild(){
   const view=B.view||"tiles";
   let html=`<div class="seg" id="bseg"><button data-v="tiles" class="${view==='tiles'?'active':''}">Tiles</button><button data-v="type" class="${view==='type'?'active':''}">Type it</button><button data-v="pat" class="${view==='pat'?'active':''}">Patterns</button></div>`;
   if(view==="pat"){ renderPatterns(html); return; }
-  if(B.cur===null) newSentence();
-  const s=SENTENCES[B.cur];
+  if(!B.cur) newSentence();
+  const s=B.cur;
+  if(!s){ stage().innerHTML=html+`<div class="card"><div class="prompt">No sentences yet</div><div class="sub">The generator needs a few tagged words (pronouns, verbs, nouns) in the bank.</div></div>`; bindBuildSeg(); return; }
   const done=B.phase!=="ask";
   const pickedIds=B.picked.map(t=>t.id);
-  html+=`
-    <div class="barlabel"><span>${view==='tiles'?'Tap the tiles in order':'Type the whole sentence in romanised Thai'}</span><span>${B.right}/${B.n}</span></div>
+  const fd=S.settings.focusDay||0;
+  html+=`<div class="chips" id="fchips"><span class="chip" style="border-color:transparent;padding-left:0;color:var(--muted)">🎯 Focus</span><button class="chip ${!fd?'active':''}" data-fd="0">Any day</button>${DAYS().map(d=>`<button class="chip ${fd===d?'active':''}" data-fd="${d}">Day ${d}${d===NEWEST_DAY()?' · today':''}</button>`).join('')}</div>
+    <div class="barlabel"><span>${view==='tiles'?'Tap the tiles in order':'Type the whole sentence in romanised Thai'}${fd?` · <b style="color:var(--gold)">Day ${fd} words</b>`:''}</span><span>${B.right}/${B.n}</span></div>
     <div class="bar jade"><i style="width:${B.n?B.right/B.n*100:0}%"></i></div>
     <div class="card pop">
-      <div class="prompt">${esc(s.en)}</div>`;
+      <div class="prompt">${esc(s.en)}${s.polite?' <small style="color:var(--muted);font-weight:400;font-size:13px">+ khráp</small>':''}</div>`;
   if(view==="tiles"){
     html+=`<div class="slot ${done?(B.ok?'ok':'bad'):''}" id="slot">${B.picked.length?B.picked.map((t,i)=>`<button class="tile" data-i="${i}"><span class="t">${esc(BY_ID[t.id].th)}</span><span class="r">${esc(BY_ID[t.id].rom)}</span></button>`).join(''):'<span class="ph">your sentence appears here</span>'}</div>
       <div class="tiles" id="tiles">${B.tiles.map((t,i)=>`<button class="tile ${B.picked.includes(t)?'used':''}" data-i="${i}"><span class="t">${esc(BY_ID[t.id].th)}</span><span class="r">${esc(BY_ID[t.id].rom)}</span></button>`).join('')}</div>`;
@@ -911,7 +1088,7 @@ function renderBuild(){
           <div class="thai" style="font-size:28px">${s.ids.map(id=>esc(BY_ID[id].th)).join(' ')}</div>
           <div class="rom">${esc(sentRom(s))}</div>
           ${view==='type'&&B.typed?`<div class="note">you typed “${esc(B.typed)}”</div>`:''}
-          ${glossOf(s.ids,view==='type'?B.marks:null)}</div>
+          ${glossOf(s.ids,view==='type'?B.marks:null)}${s.tip?`<div class="note">💡 ${esc(s.tip)}</div>`:''}</div>
         <div class="row"><button class="listen" id="bsay">🔊</button><button class="btn gold" id="bnext">Next →</button></div>`;
   } else if(view==="tiles"){
     html+=`<div class="row"><button class="btn ghost" id="bclear" ${B.picked.length?'':'disabled'}>Clear</button><button class="btn gold" id="bcheck" ${B.picked.length?'':'disabled'}>Check</button></div>`;
@@ -919,6 +1096,7 @@ function renderBuild(){
   html+=`</div>`;
   stage().innerHTML=html;
   bindBuildSeg();
+  $('fchips').onclick=e=>{ const b=e.target.closest('button.chip'); if(!b) return; const d=+b.dataset.fd; if(d===(S.settings.focusDay||0)) return; S.settings.focusDay=d; save(); B.recentFrames=[]; newSentence(); B.hint=0; renderBuild(); toast(d?`Focusing on Day ${d} words`:'Any day'); };
   const scoreIt=ok=>{ const k=sentKey(s); const r=S.sent[k]||{ok:0,bad:0}; ok?r.ok++:r.bad++; S.sent[k]=r; logActivity(); save();
       B.n++; if(ok) B.right++; B.ok=ok; B.phase="done"; renderBuild();
       if(S.settings.autoplay) speak(sentTh(s)); if(navigator.vibrate) navigator.vibrate(ok?15:[30,40,30]); };
@@ -1138,7 +1316,7 @@ const FOOT={
   today:"Daily review = due words from earlier days + today's words, both directions, one pass. Or pick a single day to drill.",
   practice:"Type the answer, then Check. Romanised spelling is matched leniently (khao / kao / khâao all count). Each direction is tracked separately — a word is solid only when you own it both ways.",
   learn:"Flip cards by tapping, swipe for next. Use the search to look up any word.",
-  build:"Tiles = put the words in order. Type it = write the whole sentence yourself. Patterns = learn the frame, swap the slot. Thai word order is mostly Subject–Verb–Object; question particles (ไหม) go at the end.",
+  build:"Sentences are generated fresh from your word bank — endless variety, always translated. Tiles = put the words in order. Type it = write the whole sentence yourself. Patterns = learn the frame, swap the slot. Thai word order is mostly Subject–Verb–Object; question particles (ไหม) go at the end.",
   tones:"Thai has 5 tones — the same syllable with a different tone is a different word. Words you miss come up more often; “Missed” drills only those.",
   progress:"Progress is saved in this browser only. Export it to move to another device."
 };
