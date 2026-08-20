@@ -49,6 +49,8 @@ Words tell the generator how they behave through an optional `g` tag. **Without 
 | `v` | `en` base verb, `t` form used before an object (`"look at"`), `obj` classes it takes (`food drink thing place person dem loc`), `asp` `any\|prog\|simple` (progressive allowed?), `dest` `"away"\|"toward"` (go / come), `at` (allows *thîi place*), `with` (allows *gàp person*), `maak` (`1` = "a lot" without object, `"any"`), `it` (English needs "it" when no object), `art:"a"` (indefinite objects: *have a car*), `comp:0` (can't follow *yàak*/*chôrp*), `nowh` (no why/when questions) | `{pos:"v",en:"eat",obj:["food","dem"],asp:"any",at:1,with:1,maak:1}` |
 | `n` | `cls` classes, `a` indefinite English (`"rice"`, `"a car"`), `the`, and for places `at` / `to`, `holds:["person"]` (only people can be located there) | `{pos:"n",cls:["place"],a:"a shop",the:"the shop",at:"at the shop",to:"to the shop"}` |
 | `adj` | `en`, `of` classes it can describe | `{pos:"adj",en:"spicy",of:["food"]}` |
+| `cop` | *bpen* "to be + noun" — drives the noun-predicate frame (*phǒm bpen khon dii*, *nîi bpen rót*, *khǎo bpen khrai?*) | `{pos:"cop"}` |
+| `dir` / `turn` / `park` | taxi-Thai frame: *líao sáai/khwǎa (thîi-nîi)*, *jòrt thîi-nîi*, *… dâi mǎi?* | `{pos:"dir",en:"left"}` |
 | `dem` / `loc` / `time` | `en` (`this`, `here`, `today`); `loc` may set `prox:1` (here vs there) | `{pos:"loc",en:"here",prox:1}` |
 | `aux` | handled by name in the frames (*yàak, dâi, yùu*) — no other fields | `{pos:"aux"}` |
 
