@@ -376,7 +376,7 @@ const TONES = [
 //  STATE & STORAGE
 // =====================================================================
 const KEY="thai-vocab-v2";
-const DEFAULT_SETTINGS={rate:0.8,autoplay:true,goal:20,distractor:true,hard:false,reviewOld:10,focusDay:0}; // focusDay: Build tab favours words of this day (0 = any)
+const DEFAULT_SETTINGS={rate:0.8,autoplay:true,goal:20,distractor:true,hard:false,reviewOld:10,focusDay:0,buildHard:false}; // buildHard: Build generates longer, fuller sentences // focusDay: Build tab favours words of this day (0 = any)
 // Stats are kept per word AND per direction:  th = EN → Thai (produce the Thai word),  en = Thai → EN (recognise it).
 // A word is only "solid" once it is solid in both directions.
 const DIRS=["th","en"];
@@ -828,6 +828,8 @@ function G(w){ // grammar tag of a word: a guess from its category, overridden b
 }
 const pk=a=>a.length?a[Math.floor(Math.random()*a.length)]:null;
 const chance=p=>Math.random()<p;
+const HARDB=()=>!!S.settings.buildHard;                     // 🔥 Harder: stack more parts into each sentence
+const hc=p=>chance(HARDB()?Math.min(.97,p*1.7+.2):p);      // boosted chance in harder mode
 const has=id=>!!BY_ID[id];
 const POS=p=>WORDS.filter(w=>G(w).pos===p);
 const PRONS=()=>POS('pron');
@@ -883,8 +885,8 @@ function objFor(v,sb){ // an object that verb v can take: {ids,en}
   if(want.includes('person')) PRONS().forEach(p=>{ if(p.id!==sb.id && !(fpg(p)&&fpg(BY_ID[sb.id]))) opts.push({ids:[p.id],en:subjOf(p).o}); });
   if(want.includes('loc')) POS('loc').forEach(l=>opts.push({ids:[l.id],en:'it '+G(l).en}));
   const o=pk(opts); if(!o) return null;
-  if(o.cls && has('gap') && chance(.12)){ // "rice and water"
-    const b=pk(opts.filter(x=>x.cls && x.ids[0]!==o.ids[0] && x.cls[0]!==o.cls[0]));
+  if(o.cls && has('gap') && hc(.12)){ // "rice and water"
+    const edb=x=>['food','drink'].includes(x.cls[0]); const b=pk(opts.filter(x=>x.cls && x.ids[0]!==o.ids[0] && x.cls[0]!==o.cls[0] && edb(x)===edb(o))); // pair like with like: rice+water, person+car — not rice+car
     if(b) return {ids:[o.ids[0],'gap',b.ids[0]],en:`${o.en} and ${b.en}`};
   }
   return o;
@@ -894,12 +896,12 @@ function vpOf(v,sb,opt={}){
   const g=G(v), ids=[v.id], rest=[]; let head=g.en, obj=null;
   const asp=g.asp==='any'?(chance(.5)?'prog':'simple'):g.asp;
   if(opt.wh==='arai'||opt.wh==='khrai'){ if(!g.obj.length || (opt.wh==='khrai'&&!g.obj.includes('person'))) return null; ids.push(opt.wh); head=g.t||g.en; }
-  else if(!opt.noObj && g.obj.length && chance(.8)){ obj=objFor(v,sb); if(obj){ ids.push(...obj.ids); head=g.t||g.en; rest.push(obj.en); } }
+  else if(!opt.noObj && g.obj.length && hc(.8)){ obj=objFor(v,sb); if(obj){ ids.push(...obj.ids); head=g.t||g.en; rest.push(obj.en); } }
   if(!obj && !ids.includes('arai') && !ids.includes('khrai') && g.it){ head=g.t||g.en; rest.push('it'); }
-  if(g.dest){ if(opt.wh==='thiinai') ids.push('thiinai'); else if(!opt.noDest && (opt.needDest||chance(.6))){ const d=pk(DESTS(g.dest)); if(d){ ids.push(d.id); rest.push(G(d).to||G(d).en); } else if(opt.needDest) return null; } }
+  if(g.dest){ if(opt.wh==='thiinai') ids.push('thiinai'); else if(!opt.noDest && (opt.needDest||hc(.6))){ const d=pk(DESTS(g.dest)); if(d){ ids.push(d.id); rest.push(G(d).to||G(d).en); } else if(opt.needDest) return null; } }
   else if(opt.wh==='thiinai'){ if(!g.at) return null; ids.push('thiinai'); }
   if(opt.wh==='gapkhrai'){ if(!g.with||!has('gap')) return null; ids.push('gap','khrai'); rest.push('with'); }
-  if(!opt.wh && !opt.noAdj){ const r=Math.random();
+  if(!opt.wh && !opt.noAdj){ const r=Math.random()*(HARDB()?.5:1);
     if(g.at && r<.15){ const p=pk(DESTS()); if(p){ if(G(p).pos==='loc'){ ids.push(p.id); rest.push(G(p).en); } else if(has('thii')){ ids.push('thii',p.id); rest.push(G(p).at); } } }
     else if(g.with && r<.3){ const c=pk(PRONS().filter(p=>p.id!==sb.id&&!ids.includes(p.id)&&!(fpg(p)&&fpg(BY_ID[sb.id])))); if(c&&has('gap')){ ids.push('gap',c.id); rest.push('with '+subjOf(c).o); } }
     else if(g.maak && r<.42 && has('maak') && (g.maak==='any'||!obj)){ ids.push('maak'); rest.push('a lot'); }
@@ -908,7 +910,7 @@ function vpOf(v,sb,opt={}){
 }
 function clause(sb,vp,o,ids,extra){ // optional "wan-níi … / … today"
   ids=ids.slice(); o={...o};
-  if(has('wannii') && vp.dyn && !o.noTime && chance(.1)){ ids.unshift('wannii'); o.tail='today'; if(vp.any) vp={...vp,asp:'prog'}; }
+  if(has('wannii') && vp.dyn && !o.noTime && hc(.1)){ ids.unshift('wannii'); o.tail='today'; if(vp.any) vp={...vp,asp:'prog'}; }
   return {ids,en:enClause(sb,vp,o),...(extra||{})};
 }
 const wantVP=(vp,tail)=>({head:'want',asp:'simple',rest:('to '+vp.head+(vp.rest?' '+vp.rest:'')+(tail||'')).trim(),dyn:true}); // "want to eat rice"
@@ -1020,7 +1022,7 @@ const FRAMES=[
 ];
 const sentKey=s=>s.key||s.ids.join('|');
 function finalizeSent(c){ // optional khráp at the end (English unchanged — the prompt shows a "+ khráp" hint), stable progress key
-  if(has('khrap') && !c.ids.includes('khrap') && c.polite!==false){ const q=/\?$/.test(c.en); if(chance(q?.3:c.req?.5:.1)){ c.ids=[...c.ids,'khrap']; if(c.req) c.en=c.en.replace(/[.!?]$/,m=>', please'+m); else c.polite=true; } }
+  if(has('khrap') && !c.ids.includes('khrap') && c.polite!==false){ const q=/\?$/.test(c.en); if(hc(q?.3:c.req?.5:.1)){ c.ids=[...c.ids,'khrap']; if(c.req) c.en=c.en.replace(/[.!?]$/,m=>', please'+m); else c.polite=true; } }
   c.key=c.ids.join('|'); return c;
 }
 function sentScore(c){
@@ -1028,13 +1030,15 @@ function sentScore(c){
   const nd=NEWEST_DAY(); let need=0;
   [...new Set(c.ids)].forEach(id=>{ const w=BY_ID[id]; if(w.day===nd) need+=1.2; if(isDue(id)) need+=.8; if(isWeak(id)) need+=1; });
   p+=Math.min(3.5,need);
+  if(HARDB()) p+=Math.min(5,([...new Set(c.ids)].length-4)*1.1); // harder: prefer the longest candidates
   const fd=S.settings.focusDay||0;
   if(fd){ const f=[...new Set(c.ids)].filter(id=>BY_ID[id].day===fd && !(c.polite && id==='khrap')).length; c.focus=f; p+=f?3+1.5*Math.min(f,3):-6; }
   if((B.recent||[]).includes(c.key)) p-=8; if((B.recentFrames||[]).includes(c.frame)) p-=1.5;
   return p;
 }
 function genSentence(){
-  const rf=B.recentFrames||[], fd=S.settings.focusDay||0; const fr=FRAMES.filter(f=>lessonOn(f.lesson)).map(f=>({f,w:f.w*(rf[0]===f.id?.08:rf.includes(f.id)?.35:1)}));
+  const rf=B.recentFrames||[], fd=S.settings.focusDay||0; const short_={phrase:.25,dem_n:.25,what_this:.25,kho:.5,drive:.5,who:.6,maak:.5};
+  const fr=FRAMES.filter(f=>lessonOn(f.lesson)).map(f=>({f,w:f.w*(rf[0]===f.id?.08:rf.includes(f.id)?.35:1)*(HARDB()?(short_[f.id]||1):1)}));
   let best=null;
   for(let tries=0;tries<(fd?16:8);tries++){ // pick a frame (weighted, avoiding recent ones), then the best of its fills; with a focus day, compare several frames
     let r=Math.random()*fr.reduce((a,x)=>a+x.w,0), f=fr[fr.length-1].f; for(const x of fr){ r-=x.w; if(r<=0){ f=x.f; break; } }
@@ -1103,7 +1107,7 @@ function renderBuild(){
   const done=B.phase!=="ask";
   const pickedIds=B.picked.map(t=>t.id);
   const fd=S.settings.focusDay||0;
-  html+=`<div class="chips" id="fchips"><span class="chip" style="border-color:transparent;padding-left:0;color:var(--muted)">🎯 Focus</span><button class="chip ${!fd?'active':''}" data-fd="0">Any day</button>${DAYS().map(d=>`<button class="chip ${fd===d?'active':''}" data-fd="${d}">Day ${d}${d===NEWEST_DAY()?' · today':''}</button>`).join('')}</div>
+  html+=`<div class="chips" id="fchips"><button class="chip clay ${HARDB()?'active':''}" data-hard="1" title="Longer, fuller sentences">🔥 Harder</button><span class="chip" style="border-color:transparent;color:var(--muted)">🎯 Focus</span><button class="chip ${!fd?'active':''}" data-fd="0">Any day</button>${DAYS().map(d=>`<button class="chip ${fd===d?'active':''}" data-fd="${d}">Day ${d}${d===NEWEST_DAY()?' · today':''}</button>`).join('')}</div>
     <div class="barlabel"><span>${view==='tiles'?'Tap the tiles in order':'Type the whole sentence in romanised Thai'}${fd?` · <b style="color:var(--gold)">Day ${fd} words</b>`:''}</span><span>${B.right}/${B.n}</span></div>
     <div class="bar jade"><i style="width:${B.n?B.right/B.n*100:0}%"></i></div>
     <div class="card pop">
@@ -1129,7 +1133,9 @@ function renderBuild(){
   html+=`</div>`;
   stage().innerHTML=html;
   bindBuildSeg();
-  $('fchips').onclick=e=>{ const b=e.target.closest('button.chip'); if(!b) return; const d=+b.dataset.fd; if(d===(S.settings.focusDay||0)) return; S.settings.focusDay=d; save(); B.recentFrames=[]; newSentence(); B.hint=0; renderBuild(); toast(d?`Focusing on Day ${d} words`:'Any day'); };
+  $('fchips').onclick=e=>{ const b=e.target.closest('button.chip'); if(!b) return;
+    if(b.dataset.hard){ S.settings.buildHard=!S.settings.buildHard; save(); newSentence(); B.hint=0; renderBuild(); toast(S.settings.buildHard?'🔥 Harder sentences on':'Back to normal sentences'); return; }
+    const d=+b.dataset.fd; if(d===(S.settings.focusDay||0)) return; S.settings.focusDay=d; save(); B.recentFrames=[]; newSentence(); B.hint=0; renderBuild(); toast(d?`Focusing on Day ${d} words`:'Any day'); };
   const scoreIt=ok=>{ const k=sentKey(s); const r=S.sent[k]||{ok:0,bad:0}; ok?r.ok++:r.bad++; S.sent[k]=r; logActivity(); save();
       B.n++; if(ok) B.right++; B.ok=ok; B.phase="done"; renderBuild();
       if(S.settings.autoplay) speak(sentTh(s)); if(navigator.vibrate) navigator.vibrate(ok?15:[30,40,30]); };
