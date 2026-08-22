@@ -154,9 +154,6 @@
   .tile .r{font-size:11px;color:var(--gold)}
   .tile.used{opacity:.25;pointer-events:none}
   .tile.en .t{font-family:'Inter',sans-serif;font-size:16px;font-weight:500;line-height:1.3;padding:4px 0}
-  .sugg{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:8px;min-height:34px}
-  .sugg button{background:var(--surface2);border:1px solid var(--line);color:var(--cream);border-radius:18px;padding:6px 12px;font-size:14px;cursor:pointer;min-height:34px}
-  .sugg button:first-child{border-color:var(--gold);color:var(--gold)}
   .gloss{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
   .gloss span{font-size:11.5px;color:var(--muted);background:var(--ink);padding:4px 8px;border-radius:8px}
   .gloss span b{color:var(--cream);font-weight:500;font-family:'Noto Sans Thai',sans-serif;font-size:14px}
@@ -1226,17 +1223,6 @@ function patternPick(){
 function newPattern(){ B.pat=patternPick(); const p=PATTERNS[B.pat]; B.fill=p.fills[Math.floor(Math.random()*p.fills.length)]; B.phase="ask"; B.typed=""; }
 const patRom=(p,fillId,blank)=>p.ids.map(id=>id==="_"?(blank?'___':BY_ID[fillId].rom):BY_ID[id].rom).join(' ');
 const patTh=(p,fillId)=>p.ids.map(id=>id==="_"?BY_ID[fillId].th:BY_ID[id].th).join('');
-// ---- English autocomplete for Thai → EN typing: the bank's glosses and alts, their verb forms, and common function words
-const EN_FUNC=["i","i'm","i've","i'd","you","you're","he","he's","she","she's","we","we're","they","it","it's","is","isn't","are","aren't","am","do","does","don't","doesn't","did","didn't","can","can't","cannot","want","wants","to","not","no","yes","the","a","an","where","where's","what","what's","when","why","how","who","who's","much","there","there's","here","this","that","very","already","yet","please","thank","thanks","with","and","or","have","has","haven't","hasn't","may","like","likes","get","got","going","at","in","on","of","for","me","him","her","us","them","my","your","his","excuse","sorry","so","really","lot","today","person","people","from","be","been"];
-let EN_VOCAB=null;
-function enVocab(){
-  if(EN_VOCAB) return EN_VOCAB; const set=new Set(EN_FUNC);
-  const add=ph=>String(ph||'').replace(/\([^)]*\)/g,'').split(/[\/|]/).forEach(p=>p.trim().toLowerCase().split(/\s+/).forEach(t=>{ t=t.replace(/[^a-z']/g,''); if(t.length>1) set.add(t); }));
-  WORDS.forEach(w=>{ const g=G(w); [w.en,...(w.alt||[]),g.en,g.a,g.the,g.at,g.to,g.s,g.o,g.t].forEach(add); if(g.pos==='v'){ const h=g.en.split(' ')[0]; [enS3(h),enIng(h),enPP(h)].forEach(x=>add(x.split(' ')[0])); } });
-  return EN_VOCAB=[...set].sort((a,b)=>a.length-b.length||a.localeCompare(b));
-}
-const capI=w=>/^i(?:'|$)/.test(w)?'I'+w.slice(1):w;
-function enSuggest(text){ const m=(text||'').match(/(\S*)$/); const pre=m[1].toLowerCase(); if(!pre) return []; return enVocab().filter(w=>w.startsWith(pre)&&w!==pre).slice(0,6).map(capI); }
 function renderBuild(){
   const view=B.view||"tiles", rev=BDIR()==='en';
   let html=`<div class="seg" id="bseg"><button data-v="tiles" class="${view==='tiles'?'active':''}">Tiles</button><button data-v="type" class="${view==='type'?'active':''}">Type it</button><button data-v="pat" class="${view==='pat'?'active':''}">Patterns</button></div>`;
@@ -1260,7 +1246,6 @@ function renderBuild(){
   } else if(!done){
     const hint=rev?(B.hint?s.ids.slice(0,B.hint).map(id=>esc(BY_ID[id].en.split('/')[0].replace(/\(.*\)/,'').trim())).join(' · ')+' …':'Articles, word order and wording are forgiven — paraphrase freely'):(B.hint?esc(sentRom(s).split(' ').slice(0,B.hint).join(' '))+' …':'Spaces and hyphens don\'t matter · tones optional');
     html+=`<form class="field" id="bform" autocomplete="off"><input id="bans" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="${rev?'the English meaning…':'e.g. hong naam yuu thii nai khrap'}" value="${esc(B.typed||'')}" ${rev?'':'lang="th"'}><button class="btn gold" type="submit" style="flex:0 0 auto;padding:14px 18px">Check</button></form>
-      ${rev?'<div class="sugg" id="sugg"></div>':''}
       <div class="hintline">${hint}</div>
       <div class="row" style="margin-top:8px"><button class="link" id="bhint">💡 Next word</button><button class="link" id="bshow">Show answer</button></div>`;
   }
@@ -1295,12 +1280,6 @@ function renderBuild(){
       else { const pickedIds=B.picked.map(t=>t.id); scoreIt(pickedIds.length===s.ids.length && pickedIds.every((id,i)=>id===s.ids[i])); } };
   } else if(!done){
     const inp=$('bans'); inp.focus({preventScroll:true});
-    const sg=$('sugg'); if(sg){ // autocomplete chips: tap (or Tab) completes the word being typed, keeps the keyboard open
-      const apply=w=>{ const v=inp.value, m=v.match(/(\S*)$/); inp.value=v.slice(0,v.length-m[1].length)+w+' '; inp.focus(); upd(); };
-      const upd=()=>{ sg.innerHTML=enSuggest(inp.value).map(w=>`<button type="button" data-w="${esc(w)}">${esc(w)}</button>`).join(''); };
-      sg.onmousedown=e=>{ e.preventDefault(); const b=e.target.closest('button'); if(b) apply(b.dataset.w); };
-      sg.ontouchend=e=>{ const b=e.target.closest('button'); if(b){ e.preventDefault(); apply(b.dataset.w); } };
-      inp.oninput=upd; inp.onkeydown=e=>{ if(e.key==='Tab'&&sg.firstChild){ e.preventDefault(); apply(sg.firstChild.dataset.w); } }; upd(); }
     $('bform').onsubmit=e=>{ e.preventDefault(); B.typed=inp.value;
       if(rev){ B.ev=checkEnSentence(s.en,inp.value); B.marks=null; scoreIt(B.ev!=='bad'); }
       else { B.ev=null; B.marks=matchSentence(s.ids,inp.value); scoreIt(!B.marks.includes('bad')); } };
