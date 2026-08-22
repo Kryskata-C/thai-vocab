@@ -1140,6 +1140,7 @@ function newSentence(){
 }
 const sentTh=s=>s.ids.map(id=>BY_ID[id].th).join('');
 const sentRom=s=>s.ids.map(id=>BY_ID[id].rom).join(' ');
+const sentRomP=s=>sentRom(s)+(/\?$/.test(s.en)?'?':'');        // for display: questions (… mǎi?, … thîi-nǎi?) get their question mark
 const glossOf=(ids,marks)=>`<div class="gloss">${ids.map((id,i)=>`<span class="${marks?marks[i]:''}"><b>${esc(BY_ID[id].th)}</b> ${esc(BY_ID[id].rom)} · ${esc(BY_ID[id].en.split('/')[0].replace(/\(.*\)/,'').trim())}</span>`).join('')}</div>`;
 const tileHtml=(t,i,used)=>t.txt!=null
   ?`<button class="tile en ${used?'used':''}" data-i="${i}"><span class="t">${esc(t.txt)}</span></button>`
@@ -1237,7 +1238,7 @@ function renderBuild(){
     <div class="barlabel"><span>${rev?(view==='tiles'?'Tap the English words in order':'Type the English meaning'):(view==='tiles'?'Tap the tiles in order':'Type the whole sentence in romanised Thai')}${fd?` · <b style="color:var(--gold)">Day ${fd} words</b>`:''}</span><span>${B.right}/${B.n}</span></div>
     <div class="bar jade"><i style="width:${B.n?B.right/B.n*100:0}%"></i></div>
     <div class="card pop">`;
-  if(rev) html+=`<div class="prompt rom" style="font-size:28px">${esc(sentRom(s))}</div><div class="sub">Thai, romanised — what does it mean?</div>${done?'':'<button class="listen" id="bplay" style="margin-top:12px" aria-label="play">🔊</button>'}`;
+  if(rev) html+=`<div class="prompt rom" style="font-size:28px">${esc(sentRomP(s))}</div><div class="sub">Thai, romanised — what does it mean?</div>${done?'':'<button class="listen" id="bplay" style="margin-top:12px" aria-label="play">🔊</button>'}`;
   else html+=`<div class="prompt">${esc(s.en)}${s.polite?' <small style="color:var(--muted);font-weight:400;font-size:13px">+ khráp</small>':''}</div>`;
   if(view==="tiles"){
     html+=`<div class="slot ${done?(B.ok?'ok':'bad'):''}" id="slot">${B.picked.length?B.picked.map((t,i)=>tileHtml(t,i,false)).join(''):`<span class="ph">${rev?'your translation appears here':'your sentence appears here'}</span>`}</div>
@@ -1251,8 +1252,8 @@ function renderBuild(){
   if(done){
     const v=B.ok?(B.ev==='close'?'close':'ok'):'bad';
     html+=`<div class="verdict ${v}" style="margin-top:14px"><h3>${v==='ok'?'✓ Correct':v==='close'?'≈ Close enough':'✗ Not quite'}</h3>
-          ${rev?`<div class="answer">${esc(s.en)}</div><div class="rom" style="margin-top:6px">${esc(sentRom(s))}</div>`
-               :`<div class="thai" style="font-size:28px">${thaiLine}</div><div class="rom">${esc(sentRom(s))}</div>`}
+          ${rev?`<div class="answer">${esc(s.en)}</div><div class="rom" style="margin-top:6px">${esc(sentRomP(s))}</div>`
+               :`<div class="thai" style="font-size:28px">${thaiLine}</div><div class="rom">${esc(sentRomP(s))}</div>`}
           ${view==='type'&&B.typed?`<div class="note">you typed “${esc(B.typed)}”</div>`:''}
           ${glossOf(s.ids,view==='type'&&!rev?B.marks:null)}${s.tip?`<div class="note">💡 ${esc(s.tip)}</div>`:''}</div>
         <div class="row"><button class="listen" id="bsay">🔊</button><button class="btn gold" id="bnext">Next →</button></div>`;
