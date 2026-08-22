@@ -1237,7 +1237,7 @@ function renderBuild(){
     <div class="barlabel"><span>${rev?(view==='tiles'?'Tap the English words in order':'Type the English meaning'):(view==='tiles'?'Tap the tiles in order':'Type the whole sentence in romanised Thai')}${fd?` · <b style="color:var(--gold)">Day ${fd} words</b>`:''}</span><span>${B.right}/${B.n}</span></div>
     <div class="bar jade"><i style="width:${B.n?B.right/B.n*100:0}%"></i></div>
     <div class="card pop">`;
-  if(rev) html+=`<div class="thai" style="font-size:30px">${thaiLine}</div><div class="rom" style="margin-top:6px">${esc(sentRom(s))}</div>${done?'':'<button class="listen" id="bplay" style="margin-top:12px" aria-label="play">🔊</button>'}`;
+  if(rev) html+=`<div class="prompt rom" style="font-size:28px">${esc(sentRom(s))}</div><div class="sub">Thai, romanised — what does it mean?</div>${done?'':'<button class="listen" id="bplay" style="margin-top:12px" aria-label="play">🔊</button>'}`;
   else html+=`<div class="prompt">${esc(s.en)}${s.polite?' <small style="color:var(--muted);font-weight:400;font-size:13px">+ khráp</small>':''}</div>`;
   if(view==="tiles"){
     html+=`<div class="slot ${done?(B.ok?'ok':'bad'):''}" id="slot">${B.picked.length?B.picked.map((t,i)=>tileHtml(t,i,false)).join(''):`<span class="ph">${rev?'your translation appears here':'your sentence appears here'}</span>`}</div>
