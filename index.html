@@ -1194,6 +1194,8 @@ function enSyn(){ // stem → canonical stem, built from the word bank's glosses
 }
 function enCanon(s){
   s=(s||"").toLowerCase().replace(/[’‘]/g,"'").replace(/—/g,' ');
+  s=s.replace(/\b(is|are|was|were|do|does|did|have|has|had|could|should|would|must)nt\b/g,'$1 not').replace(/\bcant\b/g,'can not').replace(/\bwont\b/g,'will not') // apostrophe-less: isnt, dont, cant …
+     .replace(/\bim\b/g,'i am').replace(/\bive\b/g,'i have').replace(/\b(you|they|we)re\b/g,'$1 are').replace(/\b(he|she|it|that|what|where|who|there|here|how)s\b/g,'$1 is');
   s=s.replace(/\bwon't\b/g,'will not').replace(/\bcan't\b/g,'can not').replace(/\bcannot\b/g,'can not').replace(/n't\b/g,' not').replace(/'m\b/g,' am').replace(/'re\b/g,' are').replace(/'ve\b/g,' have').replace(/'ll\b/g,' will').replace(/'d\b/g,' would').replace(/'s\b/g,' is');
   EN_PHRASES.forEach(([re,to])=>{ s=s.replace(re,to); });
   const syn=enSyn(), out=new Set();
