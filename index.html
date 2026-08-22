@@ -310,7 +310,7 @@ const WORDS = [
   {id:"haa",th:"ห้า",rom:"hâa",en:"five",alt:["5"],tone:"falling",day:4,cat:"Numbers"},
   {id:"gap",th:"กับ",rom:"gàp",en:"and / with",tone:"low",day:4,cat:"Glue"},
   {id:"reu",th:"หรือ",rom:"rʉ̌ʉ (reu)",en:"or",tone:"rising",day:4,cat:"Glue"},
-  {id:"dai",th:"ได้",rom:"dâi",en:"can / able to",alt:["able","ok","okay","possible","get","receive","get receive"],tone:"falling",day:4,cat:"Verbs",g:{pos:"aux"}}, // Day 9: second job = get / receive
+  {id:"dai",th:"ได้",rom:"dâi",en:"can / able to",alt:["able","ok","okay","possible","get","receive","get receive","got"],tone:"falling",day:4,cat:"Verbs",g:{pos:"aux"}}, // twin: dai_get (Day 9) — same word BEFORE a noun = get / receive
   {id:"ruu",th:"รู้",rom:"rúu",en:"know",tone:"high",day:4,cat:"Verbs",g:{pos:"v",en:"know",obj:[],asp:"simple",nowh:1}},
   {id:"duu",th:"ดู",rom:"duu",en:"see / look",alt:["watch"],tone:"mid",day:4,cat:"Verbs",g:{pos:"v",en:"look",t:"look at",obj:["thing","dem","person"],asp:"any",it:1}},
   // Day 5
@@ -346,7 +346,7 @@ const WORDS = [
   {id:"thuuk",th:"ถูก",rom:"thùuk",en:"cheap",alt:["inexpensive","correct"],tone:"low",day:8,cat:"Describe",g:{pos:"adj",en:"cheap",of:["thing","food","drink","place"]}},
   {id:"rorn",th:"ร้อน",rom:"rórn (ráwn)",en:"hot (weather)",alt:["hot"],tone:"high",day:8,cat:"Describe",g:{pos:"adj",en:"hot",of:["food","drink"],attr:1}},
   {id:"yen",th:"เย็น",rom:"yen",en:"cold / iced",alt:["cold","iced","cool"],tone:"mid",day:8,cat:"Describe",g:{pos:"adj",en:"cold",of:["food","drink"],attr:1}},
-  // Day 9 — numbers six to ten, speak / say  (dâi also gains its second job: get / receive — see Day 4)
+  // Day 9 — numbers six to ten, speak / say, and dâi's second job: get / receive (same word as 'can' — position decides)
   {id:"hok",th:"หก",rom:"hòk",en:"six",alt:["6"],tone:"low",day:9,cat:"Numbers"},
   {id:"jet",th:"เจ็ด",rom:"jèt",en:"seven",alt:["7"],tone:"low",day:9,cat:"Numbers"},
   {id:"bpaet",th:"แปด",rom:"bpàet (paet)",en:"eight",alt:["8"],tone:"low",day:9,cat:"Numbers"},
@@ -354,6 +354,7 @@ const WORDS = [
   {id:"sip",th:"สิบ",rom:"sìp",en:"ten",alt:["10"],tone:"low",day:9,cat:"Numbers"},
   {id:"phuut",th:"พูด",rom:"phûut",en:"speak / talk",alt:["talk","speak"],tone:"falling",day:9,cat:"Verbs",g:{pos:"v",en:"speak",obj:[],asp:"any",with:1,maak:1}},
   {id:"bawk",th:"บอก",rom:"bàwk",en:"say / tell",alt:["tell","say"],tone:"low",day:9,cat:"Verbs",g:{pos:"v",en:"say",t:"tell",obj:["person"],asp:"any",nowh:1}},
+  {id:"dai_get",th:"ได้",rom:"dâi",en:"get / receive",alt:["receive","obtain","got","get","can","able"],tone:"falling",day:9,cat:"Verbs",g:{pos:"get",obj:["food","drink","thing"]}}, // same word as dâi = can (Day 4): BEFORE a noun = get / receive, AFTER a verb = can
 ];
 const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
 
@@ -375,8 +376,10 @@ const PATTERNS = [
    fills:[{id:"aroi",en:"Very delicious."},{id:"phet",en:"Very spicy."},{id:"dii",en:"Very good."},{id:"suay",en:"Very beautiful."}]},
   {id:"thaorai",name:"[X] thâo-rài?",gloss:"How much is [X]?",ids:["_","thaorai"],
    fills:[{id:"nii",en:"How much is this?"},{id:"nan",en:"How much is that?"},{id:"khao_rice",en:"How much is the rice?"},{id:"aahaan",en:"How much is the food?"}]},
-  {id:"dai",name:"[verb] dâi mǎi?",gloss:"Can I [verb]?  — dâi = can, mǎi = ?",ids:["_","dai","mai_q"],
+  {id:"dai",name:"[verb] dâi mǎi?",gloss:"Can I [verb]?  — dâi AFTER the verb = can, mǎi = ?",ids:["_","dai","mai_q"],
    fills:[{id:"gin",en:"Can I eat?"},{id:"bpai",en:"Can I go?"},{id:"duu",en:"Can I look?"},{id:"deum",en:"Can I drink?"}]},
+  {id:"dai_get",name:"phǒm dâi [X]",gloss:"I got [X]  — dâi BEFORE the noun = get / receive (after a verb it means 'can')",ids:["phom","dai_get","_"],
+   fills:[{id:"ngern",en:"I got money."},{id:"khao_rice",en:"I got rice."},{id:"naam",en:"I got water."},{id:"aahaan",en:"I got the food."}]},
   {id:"nii",name:"nîi [X]",gloss:"This is [X]  — no word for 'is' with adjectives",ids:["nii","_"],
    fills:[{id:"aroi",en:"This is delicious."},{id:"phet",en:"This is spicy."},{id:"suay",en:"This is beautiful."},{id:"khao_rice",en:"This is rice."},{id:"naam",en:"This is water."}]},
   {id:"chorp",name:"phǒm chôrp [X]",gloss:"I like [X]",ids:["phom","chorp","_"],
@@ -982,7 +985,8 @@ function clause(sb,vp,o,ids,extra){ // optional "wan-níi … / … today"
 const wantVP=(vp,tail)=>({head:'want',asp:'simple',rest:('to '+vp.head+(vp.rest?' '+vp.rest:'')+(tail||'')).trim(),dyn:true}); // "want to eat rice"
 const compVerbs=()=>POS('v').filter(v=>G(v).comp!==0);   // verbs usable after yàak / chôrp
 const TIP={mai_q:"mǎi turns a statement into a yes/no question — it always goes at the end",mai_not:"mâi (falling) goes right before the verb or adjective",
-  yaak:"yàak + verb = want to; the verb (and its object) follow directly",dai:"dâi = can/able — it comes AFTER the verb, and mǎi after that",
+  yaak:"yàak + verb = want to; the verb (and its object) follow directly",dai:"dâi AFTER the verb = can/able (mǎi comes after that) — the same word BEFORE a noun means 'get'",
+  get:"dâi BEFORE a noun = get / receive; AFTER a verb it means 'can'. Same word — position decides",
   adj:"Thai adjectives are verbs: no 'is' between the noun and the adjective; mâak = 'very' comes after",yuu:"yùu = 'is located' — thing + yùu + place",
   wh:"Thai question words stay in the slot they ask about — no word-order flip", tammai:"tam-mai (why) sits at the FRONT; the rest of the sentence keeps its order",
   yangngai:"yang-ngai (how) goes at the END", kho:"khǒ + thing + khráp = the polite way to ask for something", exist:"place + mii + thing = there is … (mii doubles as 'there is/are')",
@@ -1016,6 +1020,15 @@ const FRAMES=[
     if(r<.3) return clause(sb,M,{mood:'stmt'},[sb.id,...vp.ids,'dai'],{tip:TIP.dai});
     if(r<.55) return clause(sb,M,{mood:'stmt',neg:true},[sb.id,...vp.ids,'mai_not','dai'],{tip:"mâi dâi = can't — both come after the verb"});
     return clause(sb,M,{mood:'yn'},[sb.id,...vp.ids,'dai','mai_q'],{tip:TIP.dai}); }},
+  {id:'get',w:3,gen(){ const gw=BY_ID['dai_get']; if(!gw) return null; const yn=chance(.25), sb=subjOf(pk(yn?OTHERS():PRONS())); if(!sb) return null;
+    const o=objFor(gw,sb); if(!o) return null; const r=Math.random();
+    if(yn) return {ids:[sb.id,'dai_get',...o.ids,'mai_q'],en:cap(`did ${sb.s} get ${o.en}?`),tip:TIP.get};
+    if(r<.35) return {ids:[sb.id,'dai_get',...o.ids],en:cap(`${sb.s} got ${o.en}.`),tip:TIP.get};
+    if(r<.55) return {ids:[sb.id,'mai_not','dai_get',...o.ids],en:cap(`${sb.s} didn't get ${o.en}.`),tip:"mâi dâi + noun = didn't get — before a verb it'd mean 'can't'"};
+    if(r<.7&&has('laew')) return {ids:[sb.id,'dai_get',...o.ids,'laew'],en:cap(`${sb.s} already got ${o.en}.`),tip:TIP.laew};
+    if(r<.85&&has('yaak')) return {ids:[sb.id,'yaak','dai_get',...o.ids],en:enClause(sb,{head:'want',asp:'simple',rest:'to get '+o.en,dyn:true},{mood:'stmt'}),tip:"yàak dâi = want to get / want to have — a very common combo"};
+    if(has('arai')){ const s2=subjOf(pk(OTHERS())); if(s2) return {ids:[s2.id,'dai_get','arai'],en:cap(`what did ${s2.s} get?`),tip:TIP.wh}; }
+    return {ids:[sb.id,'dai_get',...o.ids],en:cap(`${sb.s} got ${o.en}.`),tip:TIP.get}; }},
   {id:'adj',w:4,gen(){ const a=pk(POS('adj')); if(!a) return null; const g=G(a);
     const subs=[...POS('dem'),...POS('n').filter(n=>!G(n).noPrice&&G(n).cls.some(c=>g.of.includes(c))),...(g.of.includes('person')?PRONS().filter(p=>G(p).n!==1):[])];
     const w=pk(subs); if(!w) return null; let sb=subjOf(w), sj=[w.id]; const dem=G(w).pos==='dem', r=Math.random(), very=has('maak')&&chance(.4);
@@ -1142,7 +1155,7 @@ function newSentence(){
     if(S.settings.distractor){ const low=toks.map(t=>t.toLowerCase()); const d=pk(WORDS.map(w=>w.en.split('/')[0].replace(/\(.*?\)/g,'').trim().split(' ')[0]).filter(x=>x&&!low.includes(x.toLowerCase()))); if(d) tiles.push({txt:d,k:-1}); }
   } else {
     tiles=s.ids.map((id,k)=>({id,k}));
-    if(S.settings.distractor){ const others=WORDS.filter(w=>!s.ids.includes(w.id)); const d=others[Math.floor(Math.random()*others.length)]; if(d) tiles.push({id:d.id,k:-1}); }
+    if(S.settings.distractor){ const others=WORDS.filter(w=>!s.ids.includes(w.id)&&!s.ids.some(id=>BY_ID[id].th===w.th)); const d=others[Math.floor(Math.random()*others.length)]; if(d) tiles.push({id:d.id,k:-1}); }
   }
   B.tiles=shuffle(tiles); B.picked=[]; B.phase="ask"; B.marks=null; B.typed=""; B.ev=null;
 }
@@ -1195,7 +1208,7 @@ function enSyn(){ // stem → canonical stem, built from the word bank's glosses
   if(EN_SYN) return EN_SYN; const m={};
   const groups=[['bathroom','toilet','restroom','washroom','wc','loo'],['shop','store','restaurant','market'],['delicious','tasty','yummy'],['big','large','huge'],['small','little','tiny'],['beautiful','pretty','lovely','gorgeous'],
     ['good','fine','nice','well','great'],['expensive','pricey','costly','dear'],['cheap','inexpensive'],['cold','iced','cool','chilly'],['person','people','human','man','woman','guy','someone','somebody'],['car','vehicle','taxi','cab'],
-    ['food','meal','dish'],['money','cash'],['sorry','apologies','apologise','apologize','pardon'],['look','see','watch'],['stop','park','halt'],['very','much','extremely'],['go','get','reach','arrive'],['who','whom'],['where','whereabouts'],['like','love','enjoy'],['have','got','own','has']];
+    ['food','meal','dish'],['money','cash'],['sorry','apologies','apologise','apologize','pardon'],['look','see','watch'],['stop','park','halt'],['very','much','extremely'],['go','get','reach','arrive','receive','obtain','gotten'],['who','whom'],['where','whereabouts'],['like','love','enjoy'],['have','got','own','has']];
   WORDS.forEach(w=>{ const parts=w.en.replace(/\([^)]*\)/g,'').split('/').map(x=>x.trim().toLowerCase()).filter(Boolean); const singles=[...parts,...(w.alt||[]).map(x=>x.toLowerCase())].filter(x=>/^[a-z']+$/.test(x)); if(singles.length>1) groups.push(singles); });
   groups.forEach(g=>{ const c=enStem(g[0]); g.forEach(x=>{ const k=enStem(x); if(!m[k]) m[k]=c; }); });
   return EN_SYN=m;
