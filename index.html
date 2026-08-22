@@ -310,7 +310,7 @@ const WORDS = [
   {id:"haa",th:"ห้า",rom:"hâa",en:"five",alt:["5"],tone:"falling",day:4,cat:"Numbers"},
   {id:"gap",th:"กับ",rom:"gàp",en:"and / with",tone:"low",day:4,cat:"Glue"},
   {id:"reu",th:"หรือ",rom:"rʉ̌ʉ (reu)",en:"or",tone:"rising",day:4,cat:"Glue"},
-  {id:"dai",th:"ได้",rom:"dâi",en:"can / able to",alt:["able","ok","okay","possible"],tone:"falling",day:4,cat:"Verbs",g:{pos:"aux"}},
+  {id:"dai",th:"ได้",rom:"dâi",en:"can / able to",alt:["able","ok","okay","possible","get","receive","get receive"],tone:"falling",day:4,cat:"Verbs",g:{pos:"aux"}}, // Day 9: second job = get / receive
   {id:"ruu",th:"รู้",rom:"rúu",en:"know",tone:"high",day:4,cat:"Verbs",g:{pos:"v",en:"know",obj:[],asp:"simple",nowh:1}},
   {id:"duu",th:"ดู",rom:"duu",en:"see / look",alt:["watch"],tone:"mid",day:4,cat:"Verbs",g:{pos:"v",en:"look",t:"look at",obj:["thing","dem","person"],asp:"any",it:1}},
   // Day 5
@@ -346,6 +346,14 @@ const WORDS = [
   {id:"thuuk",th:"ถูก",rom:"thùuk",en:"cheap",alt:["inexpensive","correct"],tone:"low",day:8,cat:"Describe",g:{pos:"adj",en:"cheap",of:["thing","food","drink","place"]}},
   {id:"rorn",th:"ร้อน",rom:"rórn (ráwn)",en:"hot (weather)",alt:["hot"],tone:"high",day:8,cat:"Describe",g:{pos:"adj",en:"hot",of:["food","drink"],attr:1}},
   {id:"yen",th:"เย็น",rom:"yen",en:"cold / iced",alt:["cold","iced","cool"],tone:"mid",day:8,cat:"Describe",g:{pos:"adj",en:"cold",of:["food","drink"],attr:1}},
+  // Day 9 — numbers six to ten, speak / say  (dâi also gains its second job: get / receive — see Day 4)
+  {id:"hok",th:"หก",rom:"hòk",en:"six",alt:["6"],tone:"low",day:9,cat:"Numbers"},
+  {id:"jet",th:"เจ็ด",rom:"jèt",en:"seven",alt:["7"],tone:"low",day:9,cat:"Numbers"},
+  {id:"bpaet",th:"แปด",rom:"bpàet (paet)",en:"eight",alt:["8"],tone:"low",day:9,cat:"Numbers"},
+  {id:"gao",th:"เก้า",rom:"gâo",en:"nine",alt:["9"],tone:"falling",day:9,cat:"Numbers"},
+  {id:"sip",th:"สิบ",rom:"sìp",en:"ten",alt:["10"],tone:"low",day:9,cat:"Numbers"},
+  {id:"phuut",th:"พูด",rom:"phûut",en:"speak / talk",alt:["talk","speak"],tone:"falling",day:9,cat:"Verbs",g:{pos:"v",en:"speak",obj:[],asp:"any",with:1,maak:1}},
+  {id:"bawk",th:"บอก",rom:"bàwk",en:"say / tell",alt:["tell","say"],tone:"low",day:9,cat:"Verbs",g:{pos:"v",en:"say",t:"tell",obj:["person"],asp:"any",nowh:1}},
 ];
 const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
 
@@ -899,7 +907,7 @@ const DESTS=dir=>[...POS('loc').filter(l=>dir==='away'?!G(l).prox:dir==='toward'
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 function enS3(v){ const [h,...r]=v.split(' '); let f; if(h==='have') f='has'; else if(h==='do') f='does'; else if(/(s|sh|ch|x|z|o)$/.test(h)) f=h+'es'; else if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ies'; else f=h+'s'; return [f,...r].join(' '); }
 function enIng(v){ const [h,...r]=v.split(' '); let f; if(/ie$/.test(h)) f=h.slice(0,-2)+'ying'; else if(/[^e]e$/.test(h)) f=h.slice(0,-1)+'ing'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ing'; else f=h+'ing'; return [f,...r].join(' '); }
-function enPP(v){ const [h,...r]=v.split(' '); const IR={eat:'eaten',drink:'drunk',go:'gone',come:'come',see:'seen',know:'known',have:'had',take:'taken',get:'got',buy:'bought'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); }
+function enPP(v){ const [h,...r]=v.split(' '); const IR={eat:'eaten',drink:'drunk',go:'gone',come:'come',see:'seen',know:'known',have:'had',take:'taken',get:'got',buy:'bought',say:'said',speak:'spoken',tell:'told',look:'looked'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); }
 const CONTR={I:"I'm",you:"you're",he:"he's",she:"she's",we:"we're",they:"they're",it:"it's"};
 const contr=sb=>CONTR[sb.s]||`${sb.s} ${sb.be}`;
 function subjOf(w){ // English subject descriptor {id,s,o,be,n} for a pronoun / noun / demonstrative
