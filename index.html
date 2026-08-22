@@ -43,8 +43,8 @@
     backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);
     padding:6px 6px calc(6px + env(safe-area-inset-bottom));display:flex;justify-content:center}
   .nav-inner{display:flex;width:100%;max-width:560px;gap:2px}
-  .nav button{flex:1;border:0;background:transparent;color:var(--muted);font-size:10.5px;font-weight:600;
-    padding:6px 2px;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;transition:.15s}
+  .nav button{flex:1;border:0;background:transparent;color:var(--muted);font-size:10px;font-weight:600;
+    padding:6px 0;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;transition:.15s}
   .nav button .ic{font-size:20px;line-height:1}
   .nav button.active{color:var(--gold);background:rgba(231,178,76,.1)}
 
@@ -153,6 +153,7 @@
   .tile .t{font-family:'Noto Sans Thai',sans-serif;font-size:22px;line-height:1.2}
   .tile .r{font-size:11px;color:var(--gold)}
   .tile.used{opacity:.25;pointer-events:none}
+  .tile.en .t{font-family:'Inter',sans-serif;font-size:16px;font-weight:500;line-height:1.3;padding:4px 0}
   .gloss{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
   .gloss span{font-size:11.5px;color:var(--muted);background:var(--ink);padding:4px 8px;border-radius:8px}
   .gloss span b{color:var(--cream);font-weight:500;font-family:'Noto Sans Thai',sans-serif;font-size:14px}
@@ -210,6 +211,18 @@
   .small.danger{background:rgba(224,120,86,.16);color:#f2c3b1;border:1px solid var(--clay)}
   textarea.io{width:100%;background:var(--ink);color:var(--cream);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;font-family:ui-monospace,monospace;min-height:80px;margin-top:8px}
 
+  /* test */
+  .spark{display:flex;align-items:flex-end;gap:3px;height:44px;margin:4px 0 10px}
+  .spark i{flex:1;background:var(--surface3);border-radius:3px 3px 0 0;min-width:6px}
+  .spark i.hi{background:var(--gold)}
+  .qrow{display:flex;gap:8px;align-items:center;font-size:13px;padding:6px 0;border-top:1px solid var(--line)}
+  .qrow:first-child{border-top:0}
+  .qrow .k{width:18px;text-align:center}
+  .qrow .p{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qrow .p small{color:var(--muted)}
+  .qrow .t{color:var(--muted);font-size:12px;white-space:nowrap}
+  .qrow .t.slow{color:var(--clay)}
+  .delta{font-weight:600}.delta.up{color:var(--jade)}.delta.down{color:#f2c3b1}.delta.flat{color:var(--muted)}
   .empty{text-align:center;color:var(--muted);font-size:14px;padding:40px 20px;line-height:1.6}
   .foot{text-align:center;font-size:11px;color:var(--muted);margin-top:18px;line-height:1.7}
   .warn{background:rgba(224,120,86,.12);border:1px solid rgba(224,120,86,.3);color:#f2c3b1;
@@ -245,6 +258,7 @@
   <button data-mode="learn"><span class="ic">🃏</span>Learn</button>
   <button data-mode="build"><span class="ic">🧩</span>Build</button>
   <button data-mode="tones"><span class="ic">🎵</span>Tones</button>
+  <button data-mode="test"><span class="ic">🎓</span>Test</button>
   <button data-mode="progress"><span class="ic">📈</span>Progress</button>
 </div></nav>
 <div class="toast" id="toast"></div>
@@ -385,13 +399,13 @@ const TONES = [
 //  STATE & STORAGE
 // =====================================================================
 const KEY="thai-vocab-v2";
-const DEFAULT_SETTINGS={rate:0.8,autoplay:true,goal:20,distractor:true,hard:false,reviewOld:10,focusDay:0,buildHard:false}; // buildHard: Build generates longer, fuller sentences // focusDay: Build tab favours words of this day (0 = any)
+const DEFAULT_SETTINGS={rate:0.8,autoplay:true,goal:20,distractor:true,hard:false,reviewOld:10,focusDay:0,buildHard:false,buildDir:"th"}; // buildDir: Build direction — th = EN → Thai (produce Thai), en = Thai → EN (translate) // buildHard: Build generates longer, fuller sentences // focusDay: Build tab favours words of this day (0 = any)
 // Stats are kept per word AND per direction:  th = EN → Thai (produce the Thai word),  en = Thai → EN (recognise it).
 // A word is only "solid" once it is solid in both directions.
 const DIRS=["th","en"];
 const DIR_LABEL={th:"EN → Thai",en:"Thai → EN"};
 const blank=()=>({right:0,wrong:0,seen:0,streak:0,due:0,last:0});
-let S={v:3,stats:{},activity:{},sent:{},pat:{},tone:{},notes:{},review:null,settings:{...DEFAULT_SETTINGS}};
+let S={v:3,stats:{},activity:{},sent:{},pat:{},tone:{},notes:{},review:null,tests:[],settings:{...DEFAULT_SETTINGS}}; // tests: graded Test-tab history
 function migrate(j){ // v2 stats were flat (one record per word, from EN → Thai drills) → move them under .th
   const out={}; Object.entries(j.stats||{}).forEach(([id,x])=>{ out[id]=("seen" in x)?{th:{...blank(),...x},en:blank()}:x; }); j.stats=out; j.v=3; return j;
 }
@@ -503,11 +517,44 @@ function checkEn(w,input){
   return "bad";
 }
 
+// ---- STRICT matching for the Test tab. Missing tone marks are still fine, but a near-miss that is (or is closer to)
+//      a different word in the bank is wrong, and typed tone marks that point at a different word are wrong too.
+let SKEL_MAP=null, EN_MAP=null;
+function skelMap(){ if(SKEL_MAP) return SKEL_MAP; const m={}; WORDS.forEach(w=>[...romAlts(w),w.rom].map(skeleton).forEach(k=>{ if(!k) return; (m[k]=m[k]||new Set()).add(w.id); })); return SKEL_MAP=m; }
+function enMap(){ if(EN_MAP) return EN_MAP; const m={}; WORDS.forEach(w=>enAlts(w).forEach(a=>{ (m[a]=m[a]||new Set()).add(w.id); })); return EN_MAP=m; }
+function checkThaiStrict(w,input){
+  const raw=(input||"").trim(); if(!raw) return false;
+  if(raw.normalize('NFC')===w.th.normalize('NFC')) return true;
+  if(/[฀-๿]/.test(raw)) return false;                                   // Thai script, but not this word
+  const typed=skeleton(raw); if(!typed) return false;
+  const targets=[...new Set([...romAlts(w),w.rom].map(skeleton).filter(Boolean))], M=skelMap();
+  if(targets.includes(typed)){
+    const sig=toneSig(raw); if(!sig) return true;                       // no tone marks typed → accepted
+    if(romAlts(w).some(r=>toneSig(r)===sig)) return true;              // right tone marks
+    return ![...(M[typed]||[])].some(id=>id!==w.id && romAlts(BY_ID[id]).some(r=>toneSig(r)===sig)); // tones spell a different word → wrong
+  }
+  // one edit away from a 4+ letter target, and no other bank word is as close
+  const d=Math.min(...targets.map(t=>lev(t,typed)));
+  if(d>1 || typed.length<4 || !targets.some(t=>t.length>=4 && lev(t,typed)===d)) return false;
+  return !Object.keys(M).some(k=>!M[k].has(w.id) && lev(k,typed)<=d);
+}
+function checkEnStrict(w,input){
+  const t=normEn(input); if(!t) return false;
+  const alts=enAlts(w), M=enMap();
+  if(alts.includes(t)) return true;
+  if(M[t]) return false;                                                 // exactly another word's meaning
+  const tw=t.split(' ');
+  if(alts.some(a=>{ const aw=a.split(' '); return aw.length===tw.length && tw.every(x=>aw.includes(x)); })) return true;   // same words, other order
+  if(alts.some(a=>{ const aw=a.split(' '); return aw.length>1 && tw.length>=Math.ceil(aw.length/2) && tw.every(x=>aw.includes(x)); })) return true; // "located" for "be located"
+  if(t.length>=4){ const d=Math.min(...alts.map(a=>lev(a,t))); if(d<=1 && !Object.keys(M).some(a=>!M[a].has(w.id) && lev(a,t)<=d)) return true; } // a typo, and no other word as close
+  return false;
+}
+
 // =====================================================================
 //  APP STATE
 // =====================================================================
 let mode="practice";
-let P={sub:"type",userSub:"type",filter:"All",scope:null,day:null,dayOpen:false,cur:null,phase:"ask",verdict:null,hint:0,session:{n:0,right:0},done:false,tq:null,noteEdit:false,heard:null,heardOk:false,listening:false,toneMiss:false};
+let P={sub:"type",userSub:"type",filter:"All",testIds:[],scope:null,day:null,dayOpen:false,cur:null,phase:"ask",verdict:null,hint:0,session:{n:0,right:0},done:false,tq:null,noteEdit:false,heard:null,heardOk:false,listening:false,toneMiss:false};
 let L={view:"cards",day:"All",q:"",idx:0,flipped:false};
 let B={view:"tiles",cur:null,recent:[],recentFrames:[],picked:[],phase:"ask",tiles:[],right:0,n:0,marks:null,typed:"",hint:0,pat:null,fill:null,pv:null,pn:0,pright:0,patOpen:false};
 let T={cur:null,phase:"ask",pick:null,right:0,n:0,filter:"all",last:null};
@@ -541,6 +588,7 @@ function practicePool(){
   if(P.filter==="Due") return WORDS.filter(w=>isDueD(w.id,d));
   if(P.filter==="Weak") return WORDS.filter(w=>isWeakD(w.id,d));
   if(P.filter==="New") return WORDS.filter(w=>stD(w.id,d).seen===0);
+  if(P.filter==="Test") return WORDS.filter(w=>(P.testIds||[]).includes(w.id)); // words missed in the last graded test
   if(P.filter==="All") return WORDS;
   return WORDS.filter(w=>w.cat===P.filter);
 }
@@ -587,14 +635,14 @@ function renderPractice(){
     else P.cur=null;
   }
   const listenOk = P.sub!=="listen" || hasThaiVoice() || !window.speechSynthesis;
-  const filters=["All","Due","Weak","New",...CATS()];
+  const filters=["All","Due","Weak","New",...((P.testIds||[]).length?["Test"]:[]),...CATS()];
   const cnt=f=>{ const old=P.filter; P.filter=f; const n=practicePool().length; P.filter=old; return n; };
   let html=review?'':`
     <div class="seg" id="subseg">${SUBS.map(([k,l])=>`<button data-sub="${k}" class="${P.sub===k?'active':''}">${l}</button>`).join('')}</div>`;
   html+=`
     ${todayMode?todayHeader(R):`<div class="chips" id="chips">${filters.map(f=>{
-      const n=cnt(f); const cls=f==="Weak"?"clay":f==="Due"?"jade":"";
-      return `<button class="chip ${cls} ${f===P.filter?'active':''}" data-f="${f}">${f}${["Due","Weak","New"].includes(f)?` ${n}`:''}</button>`; }).join('')}</div>`}
+      const n=cnt(f); const cls=f==="Weak"||f==="Test"?"clay":f==="Due"?"jade":"";
+      return `<button class="chip ${cls} ${f===P.filter?'active':''}" data-f="${f}">${f==="Test"?"🎓 Test misses":f}${["Due","Weak","New","Test"].includes(f)?` ${n}`:''}</button>`; }).join('')}</div>`}
     <div class="barlabel"><span>Today ${Math.min(tc,goal)}/${goal}${tc>=goal?' ✓ goal reached':''}</span><span>${review?`Review ${Math.min(R.i,R.queue.length)}/${R.queue.length}`:`Session ${P.session.right}/${P.session.n}`}</span></div>
     <div class="bar ${tc>=goal?'jade':''}"><i style="width:${Math.min(100,tc/goal*100)}%"></i></div>`;
 
@@ -1046,7 +1094,7 @@ function finalizeSent(c){ // optional khráp at the end (English unchanged — t
   c.key=c.ids.join('|'); return c;
 }
 function sentScore(c){
-  const r=S.sent[c.key]||{ok:0,bad:0}; let p=Math.random()*3+r.bad*2-r.ok*1.5+(r.ok+r.bad?0:1.5);
+  const r=S.sent[BDIR()==='en'?c.key+'#en':c.key]||{ok:0,bad:0}; let p=Math.random()*3+r.bad*2-r.ok*1.5+(r.ok+r.bad?0:1.5);
   const nd=NEWEST_DAY(); let need=0;
   [...new Set(c.ids)].forEach(id=>{ const w=BY_ID[id]; if(w.day===nd) need+=1.2; if(isDue(id)) need+=.8; if(isWeak(id)) need+=1; });
   p+=Math.min(3.5,need);
@@ -1074,18 +1122,31 @@ function genSentence(){
 // ---------------------------------------------------------------------
 //  BUILD (sentence builder: tiles · type it · patterns)
 // ---------------------------------------------------------------------
+const BDIR=()=>S.settings.buildDir==='en'?'en':'th';        // Build direction: th = EN → Thai (produce Thai), en = Thai → EN (translate)
+const sentRecKey=s=>BDIR()==='en'?s.key+'#en':s.key;          // sentence progress is tracked per direction
+const enTokens=en=>en.split(/\s+/).map(t=>t.replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g,'')).filter(Boolean); // "May I have rice, please." → May I have rice please
 function newSentence(){
   const s=genSentence(); B.cur=s; if(!s) return;
   B.recent=[s.key,...(B.recent||[])].slice(0,14); B.recentFrames=[s.frame,...(B.recentFrames||[])].slice(0,4);
-  const tiles=s.ids.map((id,k)=>({id,k}));
-  if(S.settings.distractor){ const others=WORDS.filter(w=>!s.ids.includes(w.id)); const d=others[Math.floor(Math.random()*others.length)]; if(d) tiles.push({id:d.id,k:-1}); }
-  B.tiles=shuffle(tiles); B.picked=[]; B.phase="ask"; B.marks=null; B.typed="";
+  let tiles;
+  if(BDIR()==='en'){ // Thai → EN: the tiles are the English words
+    const toks=enTokens(s.en); tiles=toks.map((txt,k)=>({txt,k}));
+    if(S.settings.distractor){ const low=toks.map(t=>t.toLowerCase()); const d=pk(WORDS.map(w=>w.en.split('/')[0].replace(/\(.*?\)/g,'').trim().split(' ')[0]).filter(x=>x&&!low.includes(x.toLowerCase()))); if(d) tiles.push({txt:d,k:-1}); }
+  } else {
+    tiles=s.ids.map((id,k)=>({id,k}));
+    if(S.settings.distractor){ const others=WORDS.filter(w=>!s.ids.includes(w.id)); const d=others[Math.floor(Math.random()*others.length)]; if(d) tiles.push({id:d.id,k:-1}); }
+  }
+  B.tiles=shuffle(tiles); B.picked=[]; B.phase="ask"; B.marks=null; B.typed=""; B.ev=null;
 }
 const sentTh=s=>s.ids.map(id=>BY_ID[id].th).join('');
 const sentRom=s=>s.ids.map(id=>BY_ID[id].rom).join(' ');
 const glossOf=(ids,marks)=>`<div class="gloss">${ids.map((id,i)=>`<span class="${marks?marks[i]:''}"><b>${esc(BY_ID[id].th)}</b> ${esc(BY_ID[id].rom)} · ${esc(BY_ID[id].en.split('/')[0].replace(/\(.*\)/,'').trim())}</span>`).join('')}</div>`;
+const tileHtml=(t,i,used)=>t.txt!=null
+  ?`<button class="tile en ${used?'used':''}" data-i="${i}"><span class="t">${esc(t.txt)}</span></button>`
+  :`<button class="tile ${used?'used':''}" data-i="${i}"><span class="t">${esc(BY_ID[t.id].th)}</span><span class="r">${esc(BY_ID[t.id].rom)}</span></button>`;
 // Match a freely typed romanised sentence word-by-word (spaces/hyphens ignored). Returns per-word marks ok|close|bad.
-function matchSentence(ids,input){
+// strict (Test tab): every word must match exactly after skeleton() — no one-letter near-misses.
+function matchSentence(ids,input,strict){
   const raw=(input||"").trim();
   if(/[฀-๿]/.test(raw)){ // typed Thai script
     const t=raw.replace(/\s+/g,'').normalize('NFC'), want=ids.map(id=>BY_ID[id].th).join('').normalize('NFC');
@@ -1101,13 +1162,57 @@ function matchSentence(ids,input){
         if(seg===c){ hit={k,len:c.length,q:k?"close":"ok"}; break; }
         // skeleton() collapses doubled letters, also across words ("yàak gin" → "yakin"): the word may share its first letter with the previous one
         if(k===0 && prev===c[0] && rem.slice(0,c.length-1)===c.slice(1)){ hit={k:0,len:c.length-1,q:"ok"}; break; }
-        if(c.length>=4 && seg.length===c.length && lev(seg,c)<=1){ hit={k,len:c.length,q:"close"}; break; }
+        if(!strict && c.length>=4 && seg.length===c.length && lev(seg,c)<=1){ hit={k,len:c.length,q:"close"}; break; }
       }
     }
     if(hit){ prev=rem[hit.k+hit.len-1]||prev; rem=rem.slice(hit.k+hit.len); marks.push(hit.q); } else { marks.push("bad"); prev=""; }
   }
   if(rem.length>3 && marks.length) marks[marks.length-1]=marks[marks.length-1]==="ok"?"close":marks[marks.length-1]; // trailing junk
   return marks;
+}
+// ---- Thai → EN: lenient matching of a typed English translation.
+//      Articles, "to / do / be / it / please", word order and punctuation are ignored; contractions are expanded; verbs are
+//      stemmed (eating / eats / ate → eat); synonyms come from the bank's own `alt` lists plus a few phrase rewrites.
+//      Negation and question words are decisive: "not" missing or "where" vs "what" = a different sentence.
+const EN_PHRASES=[[/\bi'?d like\b/g,'i want'],[/\bwould like\b/g,'want'],[/\b(?:can|could|may) i (?:have|get)\b/g,'may i have'],[/\bgive me\b/g,'may i have'],[/\bexcuse me\b/g,'sorry'],
+  [/\bpull over\b/g,'stop'],[/\bthank you\b/g,'thanks'],[/\bthanks a lot\b/g,'thanks very'],[/\bthank you very much\b/g,'thanks very'],[/\ba lot\b/g,'very'],[/\bso much\b/g,'very'],[/\breally\b/g,'very'],[/\bso\b/g,'very'],
+  [/\bwanna\b/g,'want to'],[/\bgonna\b/g,'going to'],[/\bwant to\b/g,'want'],[/\bwould you like\b/g,'want'],[/\bdo you want\b/g,'want'],[/\bdon'?t want\b/g,'not want'],[/\bno thanks\b/g,'not want'],[/\bthere is\b/g,'have'],[/\bthere are\b/g,'have'],[/\bthere'?s\b/g,'have'],[/\bis there\b/g,'have'],[/\bare there\b/g,'have']];
+const EN_IRR={am:'be',is:'be',are:'be',was:'be',were:'be',has:'have',had:'have',does:'do',did:'do',goes:'go',went:'go',gone:'go',ate:'eat',eaten:'eat',drank:'drink',drunk:'drink',came:'come',saw:'see',seen:'see',knew:'know',known:'know',took:'take',taken:'take',bought:'buy',got:'get',people:'person',men:'man',no:'not',could:'can',may:'can',me:'i',my:'i',him:'he',her:'she',us:'we',them:'they',nope:'not'};
+const EN_STOP=new Set(['a','an','the','to','be','do','it','please','yes','ok','okay','hey','oh','and','of','at','in','on','some','any']);
+function enStem(t){ t=EN_IRR[t]||t; if(t.length>4&&/ing$/.test(t)) t=t.slice(0,-3); else if(t.length>4&&/ed$/.test(t)) t=t.slice(0,-2); else if(t.length>3&&/ies$/.test(t)) t=t.slice(0,-3)+'y';
+  else if(t.length>3&&/(s|sh|ch|x|z|o)es$/.test(t)) t=t.slice(0,-2); else if(t.length>3&&/[^s]s$/.test(t)) t=t.slice(0,-1); if(t.length>3&&/e$/.test(t)) t=t.slice(0,-1); return t; }
+let EN_SYN=null;
+function enSyn(){ // stem → canonical stem, built from the word bank's glosses and alts plus a few general groups
+  if(EN_SYN) return EN_SYN; const m={};
+  const groups=[['bathroom','toilet','restroom','washroom','wc','loo'],['shop','store','restaurant','market'],['delicious','tasty','yummy'],['big','large','huge'],['small','little','tiny'],['beautiful','pretty','lovely','gorgeous'],
+    ['good','fine','nice','well','great'],['expensive','pricey','costly','dear'],['cheap','inexpensive'],['cold','iced','cool','chilly'],['person','people','human','man','woman','guy','someone','somebody'],['car','vehicle','taxi','cab'],
+    ['food','meal','dish'],['money','cash'],['sorry','apologies','apologise','apologize','pardon'],['look','see','watch'],['stop','park','halt'],['very','much','extremely'],['go','get','reach','arrive'],['who','whom'],['where','whereabouts'],['like','love','enjoy'],['have','got','own','has']];
+  WORDS.forEach(w=>{ const parts=w.en.replace(/\([^)]*\)/g,'').split('/').map(x=>x.trim().toLowerCase()).filter(Boolean); const singles=[...parts,...(w.alt||[]).map(x=>x.toLowerCase())].filter(x=>/^[a-z']+$/.test(x)); if(singles.length>1) groups.push(singles); });
+  groups.forEach(g=>{ const c=enStem(g[0]); g.forEach(x=>{ const k=enStem(x); if(!m[k]) m[k]=c; }); });
+  return EN_SYN=m;
+}
+function enCanon(s){
+  s=(s||"").toLowerCase().replace(/[’‘]/g,"'").replace(/—/g,' ');
+  s=s.replace(/\bwon't\b/g,'will not').replace(/\bcan't\b/g,'can not').replace(/\bcannot\b/g,'can not').replace(/n't\b/g,' not').replace(/'m\b/g,' am').replace(/'re\b/g,' are').replace(/'ve\b/g,' have').replace(/'ll\b/g,' will').replace(/'d\b/g,' would').replace(/'s\b/g,' is');
+  EN_PHRASES.forEach(([re,to])=>{ s=s.replace(re,to); });
+  const syn=enSyn(), out=new Set();
+  s.replace(/[^a-z0-9 ]+/g,' ').split(/\s+/).filter(Boolean).forEach(t=>{ if(EN_STOP.has(t)) return; let k=enStem(t); if(EN_STOP.has(k)) return; k=syn[k]||k; out.add(k); });
+  return out;
+}
+const EN_WH=new Set(['who','what','wher','when','why','how']);
+const EN_SOFT=new Set(['very','today','now','hav','will','would']); // dropping these is a wording difference, not a different sentence
+// returns "ok" | "close" | "bad"
+function checkEnSentence(target,input){
+  const T=enCanon(target), U=enCanon(input); if(!U.size) return "bad";
+  if(T.has('not')!==U.has('not')) return "bad";                                   // negation flips the meaning
+  for(const wh of EN_WH) if(T.has(wh)&&!U.has(wh)) return "bad";                   // wrong / missing question word
+  let hit=0; const extra=[...U].filter(u=>!T.has(u)); const missing=[];
+  T.forEach(t=>{ if(U.has(t)) hit++; else { const j=extra.findIndex(u=>t.length>=4&&u.length>=4&&lev(t,u)<=1); if(j>=0){ hit++; extra.splice(j,1); } else missing.push(t); } }); // typo tolerance
+  const n=T.size||1, cov=hit/n, hard=missing.filter(t=>!EN_SOFT.has(t)).length; // hard = missing content words
+  if(!hard && missing.length<=1 && extra.length<=1) return "ok";                    // same content, any wording
+  if(!hard && extra.length<=Math.ceil(n/2)) return "close";                          // right idea, padded with extra words
+  if(hard===1 && cov>=.5 && extra.length<=1) return "close";                        // one content word off / missing
+  return "bad";
 }
 // ---- patterns
 function patternPick(){
@@ -1118,34 +1223,38 @@ function newPattern(){ B.pat=patternPick(); const p=PATTERNS[B.pat]; B.fill=p.fi
 const patRom=(p,fillId,blank)=>p.ids.map(id=>id==="_"?(blank?'___':BY_ID[fillId].rom):BY_ID[id].rom).join(' ');
 const patTh=(p,fillId)=>p.ids.map(id=>id==="_"?BY_ID[fillId].th:BY_ID[id].th).join('');
 function renderBuild(){
-  const view=B.view||"tiles";
+  const view=B.view||"tiles", rev=BDIR()==='en';
   let html=`<div class="seg" id="bseg"><button data-v="tiles" class="${view==='tiles'?'active':''}">Tiles</button><button data-v="type" class="${view==='type'?'active':''}">Type it</button><button data-v="pat" class="${view==='pat'?'active':''}">Patterns</button></div>`;
   if(view==="pat"){ renderPatterns(html); return; }
   if(!B.cur) newSentence();
   const s=B.cur;
   if(!s){ stage().innerHTML=html+`<div class="card"><div class="prompt">No sentences yet</div><div class="sub">The generator needs a few tagged words (pronouns, verbs, nouns) in the bank.</div></div>`; bindBuildSeg(); return; }
   const done=B.phase!=="ask";
-  const pickedIds=B.picked.map(t=>t.id);
   const fd=S.settings.focusDay||0;
-  html+=`<div class="chips" id="fchips"><button class="chip clay ${HARDB()?'active':''}" data-hard="1" title="Longer, fuller sentences">🔥 Harder</button><span class="chip" style="border-color:transparent;color:var(--muted)">🎯 Focus</span><button class="chip ${!fd?'active':''}" data-fd="0">Any day</button>${DAYS().map(d=>`<button class="chip ${fd===d?'active':''}" data-fd="${d}">Day ${d}${d===NEWEST_DAY()?' · today':''}</button>`).join('')}</div>
-    <div class="barlabel"><span>${view==='tiles'?'Tap the tiles in order':'Type the whole sentence in romanised Thai'}${fd?` · <b style="color:var(--gold)">Day ${fd} words</b>`:''}</span><span>${B.right}/${B.n}</span></div>
+  const thaiLine=s.ids.map(id=>esc(BY_ID[id].th)).join(' ');
+  html+=`<div class="seg" id="bdirseg" style="margin-top:-6px"><button data-dir="th" class="${!rev?'active':''}">EN → Thai</button><button data-dir="en" class="${rev?'active':''}">Thai → EN</button></div>
+    <div class="chips" id="fchips"><button class="chip clay ${HARDB()?'active':''}" data-hard="1" title="Longer, fuller sentences">🔥 Harder</button><span class="chip" style="border-color:transparent;color:var(--muted)">🎯 Focus</span><button class="chip ${!fd?'active':''}" data-fd="0">Any day</button>${DAYS().map(d=>`<button class="chip ${fd===d?'active':''}" data-fd="${d}">Day ${d}${d===NEWEST_DAY()?' · today':''}</button>`).join('')}</div>
+    <div class="barlabel"><span>${rev?(view==='tiles'?'Tap the English words in order':'Type the English meaning'):(view==='tiles'?'Tap the tiles in order':'Type the whole sentence in romanised Thai')}${fd?` · <b style="color:var(--gold)">Day ${fd} words</b>`:''}</span><span>${B.right}/${B.n}</span></div>
     <div class="bar jade"><i style="width:${B.n?B.right/B.n*100:0}%"></i></div>
-    <div class="card pop">
-      <div class="prompt">${esc(s.en)}${s.polite?' <small style="color:var(--muted);font-weight:400;font-size:13px">+ khráp</small>':''}</div>`;
+    <div class="card pop">`;
+  if(rev) html+=`<div class="thai" style="font-size:30px">${thaiLine}</div><div class="rom" style="margin-top:6px">${esc(sentRom(s))}</div>${done?'':'<button class="listen" id="bplay" style="margin-top:12px" aria-label="play">🔊</button>'}`;
+  else html+=`<div class="prompt">${esc(s.en)}${s.polite?' <small style="color:var(--muted);font-weight:400;font-size:13px">+ khráp</small>':''}</div>`;
   if(view==="tiles"){
-    html+=`<div class="slot ${done?(B.ok?'ok':'bad'):''}" id="slot">${B.picked.length?B.picked.map((t,i)=>`<button class="tile" data-i="${i}"><span class="t">${esc(BY_ID[t.id].th)}</span><span class="r">${esc(BY_ID[t.id].rom)}</span></button>`).join(''):'<span class="ph">your sentence appears here</span>'}</div>
-      <div class="tiles" id="tiles">${B.tiles.map((t,i)=>`<button class="tile ${B.picked.includes(t)?'used':''}" data-i="${i}"><span class="t">${esc(BY_ID[t.id].th)}</span><span class="r">${esc(BY_ID[t.id].rom)}</span></button>`).join('')}</div>`;
+    html+=`<div class="slot ${done?(B.ok?'ok':'bad'):''}" id="slot">${B.picked.length?B.picked.map((t,i)=>tileHtml(t,i,false)).join(''):`<span class="ph">${rev?'your translation appears here':'your sentence appears here'}</span>`}</div>
+      <div class="tiles" id="tiles">${B.tiles.map((t,i)=>tileHtml(t,i,B.picked.includes(t))).join('')}</div>`;
   } else if(!done){
-    html+=`<form class="field" id="bform" autocomplete="off"><input id="bans" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="e.g. hong naam yuu thii nai khrap" value="${esc(B.typed||'')}"><button class="btn gold" type="submit" style="flex:0 0 auto;padding:14px 18px">Check</button></form>
-      <div class="hintline">${B.hint?esc(sentRom(s).split(' ').slice(0,B.hint).join(' '))+' …':'Spaces and hyphens don\'t matter · tones optional'}</div>
+    const hint=rev?(B.hint?s.ids.slice(0,B.hint).map(id=>esc(BY_ID[id].en.split('/')[0].replace(/\(.*\)/,'').trim())).join(' · ')+' …':'Articles, word order and wording are forgiven — paraphrase freely'):(B.hint?esc(sentRom(s).split(' ').slice(0,B.hint).join(' '))+' …':'Spaces and hyphens don\'t matter · tones optional');
+    html+=`<form class="field" id="bform" autocomplete="off"><input id="bans" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="${rev?'the English meaning…':'e.g. hong naam yuu thii nai khrap'}" value="${esc(B.typed||'')}" ${rev?'':'lang="th"'}><button class="btn gold" type="submit" style="flex:0 0 auto;padding:14px 18px">Check</button></form>
+      <div class="hintline">${hint}</div>
       <div class="row" style="margin-top:8px"><button class="link" id="bhint">💡 Next word</button><button class="link" id="bshow">Show answer</button></div>`;
   }
   if(done){
-    html+=`<div class="verdict ${B.ok?'ok':(B.marks&&!B.marks.includes('bad')?'close':'bad')}" style="margin-top:14px"><h3>${B.ok?'✓ Correct':(B.marks&&!B.marks.includes('bad')?'≈ Close enough':'✗ Not quite')}</h3>
-          <div class="thai" style="font-size:28px">${s.ids.map(id=>esc(BY_ID[id].th)).join(' ')}</div>
-          <div class="rom">${esc(sentRom(s))}</div>
+    const v=B.ok?(B.ev==='close'?'close':'ok'):'bad';
+    html+=`<div class="verdict ${v}" style="margin-top:14px"><h3>${v==='ok'?'✓ Correct':v==='close'?'≈ Close enough':'✗ Not quite'}</h3>
+          ${rev?`<div class="answer">${esc(s.en)}</div><div class="rom" style="margin-top:6px">${esc(sentRom(s))}</div>`
+               :`<div class="thai" style="font-size:28px">${thaiLine}</div><div class="rom">${esc(sentRom(s))}</div>`}
           ${view==='type'&&B.typed?`<div class="note">you typed “${esc(B.typed)}”</div>`:''}
-          ${glossOf(s.ids,view==='type'?B.marks:null)}${s.tip?`<div class="note">💡 ${esc(s.tip)}</div>`:''}</div>
+          ${glossOf(s.ids,view==='type'&&!rev?B.marks:null)}${s.tip?`<div class="note">💡 ${esc(s.tip)}</div>`:''}</div>
         <div class="row"><button class="listen" id="bsay">🔊</button><button class="btn gold" id="bnext">Next →</button></div>`;
   } else if(view==="tiles"){
     html+=`<div class="row"><button class="btn ghost" id="bclear" ${B.picked.length?'':'disabled'}>Clear</button><button class="btn gold" id="bcheck" ${B.picked.length?'':'disabled'}>Check</button></div>`;
@@ -1153,23 +1262,28 @@ function renderBuild(){
   html+=`</div>`;
   stage().innerHTML=html;
   bindBuildSeg();
+  $('bdirseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ const d=b.dataset.dir; if(d===BDIR()) return; S.settings.buildDir=d; save(); newSentence(); B.hint=0; renderBuild(); toast(d==='en'?'Thai → EN: read the Thai, give the English':'EN → Thai: build the Thai sentence'); });
   $('fchips').onclick=e=>{ const b=e.target.closest('button.chip'); if(!b) return;
     if(b.dataset.hard){ S.settings.buildHard=!S.settings.buildHard; save(); newSentence(); B.hint=0; renderBuild(); toast(S.settings.buildHard?'🔥 Harder sentences on':'Back to normal sentences'); return; }
     const d=+b.dataset.fd; if(d===(S.settings.focusDay||0)) return; S.settings.focusDay=d; save(); B.recentFrames=[]; newSentence(); B.hint=0; renderBuild(); toast(d?`Focusing on Day ${d} words`:'Any day'); };
-  const scoreIt=ok=>{ const k=sentKey(s); const r=S.sent[k]||{ok:0,bad:0}; ok?r.ok++:r.bad++; S.sent[k]=r; logActivity(); save();
+  const scoreIt=ok=>{ const k=sentRecKey(s); const r=S.sent[k]||{ok:0,bad:0}; ok?r.ok++:r.bad++; S.sent[k]=r; logActivity(); save();
       B.n++; if(ok) B.right++; B.ok=ok; B.phase="done"; renderBuild();
       if(S.settings.autoplay) speak(sentTh(s)); if(navigator.vibrate) navigator.vibrate(ok?15:[30,40,30]); };
+  const bp=$('bplay'); if(bp) bp.onclick=()=>speak(sentTh(s));
   if(!done && view==="tiles"){
     const slot=$('slot'), tiles=$('tiles');
     tiles.onclick=e=>{ const b=e.target.closest('.tile'); if(!b) return; const t=B.tiles[+b.dataset.i]; if(B.picked.includes(t)) return; B.picked.push(t); renderBuild(); };
     slot.onclick=e=>{ const b=e.target.closest('.tile'); if(!b) return; B.picked.splice(+b.dataset.i,1); renderBuild(); };
     $('bclear').onclick=()=>{ B.picked=[]; renderBuild(); };
-    $('bcheck').onclick=()=>scoreIt(pickedIds.length===s.ids.length && pickedIds.every((id,i)=>id===s.ids[i]));
+    $('bcheck').onclick=()=>{ if(rev){ const want=enTokens(s.en); const got=B.picked.map(t=>t.txt); B.ev=null; scoreIt(got.length===want.length && got.every((x,i)=>x===want[i])); }
+      else { const pickedIds=B.picked.map(t=>t.id); scoreIt(pickedIds.length===s.ids.length && pickedIds.every((id,i)=>id===s.ids[i])); } };
   } else if(!done){
     const inp=$('bans'); inp.focus({preventScroll:true});
-    $('bform').onsubmit=e=>{ e.preventDefault(); B.typed=inp.value; B.marks=matchSentence(s.ids,inp.value); scoreIt(!B.marks.includes('bad')); };
+    $('bform').onsubmit=e=>{ e.preventDefault(); B.typed=inp.value;
+      if(rev){ B.ev=checkEnSentence(s.en,inp.value); B.marks=null; scoreIt(B.ev!=='bad'); }
+      else { B.ev=null; B.marks=matchSentence(s.ids,inp.value); scoreIt(!B.marks.includes('bad')); } };
     $('bhint').onclick=()=>{ B.hint=Math.min(s.ids.length,(B.hint||0)+1); B.typed=inp.value; renderBuild(); };
-    $('bshow').onclick=()=>{ B.typed=inp.value; B.marks=s.ids.map(()=>"bad"); scoreIt(false); };
+    $('bshow').onclick=()=>{ B.typed=inp.value; B.ev=null; B.marks=rev?null:s.ids.map(()=>"bad"); scoreIt(false); };
   } else {
     $('bsay').onclick=()=>speak(sentTh(s));
     $('bnext').onclick=()=>{ newSentence(); B.hint=0; renderBuild(); };
@@ -1261,6 +1375,140 @@ function renderTones(){
 }
 
 // ---------------------------------------------------------------------
+//  TEST  (graded assessment: fixed length, mixed question types, no hints,
+//  no "show answer", no autoplay, one shot per question, timed; results
+//  are saved to S.tests so attempts can be compared over time)
+// ---------------------------------------------------------------------
+let X={stage:"setup",size:20,qs:[],i:0,t0:0,qt0:0,quit:false,result:null,tick:null};
+const TEST_TYPES={en2th:"EN → Thai",th2en:"Thai → EN",listen:"Listening",tone:"Tone",build:"Sentence"};
+const fmtMs=ms=>{ const s=Math.round(ms/1000); return s>=60?`${Math.floor(s/60)}m ${String(s%60).padStart(2,'0')}s`:`${s}s`; };
+const fmtSec=ms=>(ms/1000).toFixed(1)+'s';
+const fmtDate=iso=>{ const d=new Date(iso); return d.toLocaleDateString(undefined,{day:'numeric',month:'short'}); };
+const deltaHtml=(d,unit,goodUp)=>{ if(d==null) return ''; const up=d>0, cls=d===0?'flat':(up===goodUp?'up':'down'); return `<span class="delta ${cls}">${d===0?'=':(up?'▲':'▼')} ${unit==='%'?Math.abs(d)+'%':fmtMs(Math.abs(d))}</span>`; };
+function testWeight(w){ // assessment sampling: weak, older and long-unseen words count more — nothing is excluded
+  const a=stD(w.id,'th'), b=stD(w.id,'en'), wrong=a.wrong+b.wrong, last=Math.max(a.last,b.last);
+  const stale=last?Math.min(30,(Date.now()-last)/864e5):12, age=NEWEST_DAY()-w.day;
+  return 1 + wrong*1.2 + (isWeak(w.id)?2:0) + Math.min(4,age*.5) + stale*.15;
+}
+function wsample(pool,n,wf){ const out=[], c=pool.slice(); while(out.length<n&&c.length){ const ws=c.map(wf), tot=ws.reduce((a,x)=>a+x,0); let r=Math.random()*tot, k=c.length-1; for(let i=0;i<c.length;i++){ r-=ws[i]; if(r<=0){ k=i; break; } } out.push(c[k]); c.splice(k,1); } return out; }
+function buildTest(n){
+  const voice=hasThaiVoice();
+  const nBuild=Math.max(1,Math.round(n*.2)), nTone=Math.max(1,Math.round(n*.15)), nListen=voice?Math.round(n*.2):0;
+  // sentences: generated fresh with neutral settings (no focus day, not "harder", EN → Thai), no repeats
+  const built=[], keep={r:B.recent,f:B.recentFrames,fd:S.settings.focusDay,h:S.settings.buildHard,d:S.settings.buildDir};
+  B.recent=[]; B.recentFrames=[]; S.settings.focusDay=0; S.settings.buildHard=false; S.settings.buildDir='th';
+  try{ for(let k=0;k<nBuild*4&&built.length<nBuild;k++){ const s=genSentence(); if(!s) break; if(built.some(x=>x.key===s.key)) continue; built.push(s); B.recent.unshift(s.key); B.recentFrames=[s.frame,...B.recentFrames].slice(0,4); } }
+  finally{ B.recent=keep.r; B.recentFrames=keep.f; S.settings.focusDay=keep.fd; S.settings.buildHard=keep.h; S.settings.buildDir=keep.d; }
+  const words=wsample(WORDS,Math.min(n-built.length,WORDS.length),testWeight);
+  const toneWords=words.filter(w=>!w.tone.includes('+')).slice(0,nTone);
+  const rest=words.filter(w=>!toneWords.includes(w)), listenWords=rest.slice(0,nListen), typed=rest.slice(nListen);
+  const qs=built.map(s=>({type:'build',sent:s}));
+  toneWords.forEach(w=>qs.push({type:'tone',id:w.id}));
+  listenWords.forEach(w=>qs.push({type:'listen',id:w.id}));
+  typed.forEach((w,i)=>qs.push({type:i%2?'th2en':'en2th',id:w.id}));
+  return shuffle(qs).map(q=>({...q,typed:'',ok:null,ms:0}));
+}
+function startTest(){ X.qs=buildTest(X.size); if(!X.qs.length){ toast('Nothing to test yet'); return; } X.i=0; X.t0=X.qt0=Date.now(); X.quit=false; X.result=null; X.stage='run'; renderTest(); }
+function testSubmit(val){
+  const q=X.qs[X.i]; if(!q) return; const w=q.id?BY_ID[q.id]:null; q.typed=val; q.ms=Date.now()-X.qt0;
+  if(q.type==='en2th'){ q.ok=checkThaiStrict(w,val); record(w.id,q.ok,'th'); }
+  else if(q.type==='th2en'){ q.ok=checkEnStrict(w,val); record(w.id,q.ok,'en'); }
+  else if(q.type==='listen'){ q.ok=checkEnStrict(w,val)||checkThaiStrict(w,val); record(w.id,q.ok,'en'); }
+  else if(q.type==='tone'){ q.ok=val===w.tone; const r=S.tone[w.id]||{ok:0,bad:0}; q.ok?r.ok++:r.bad++; S.tone[w.id]=r; logActivity(); save(); }
+  else { q.marks=matchSentence(q.sent.ids,val,true); q.ok=!q.marks.includes('bad'); const r=S.sent[q.sent.key]||{ok:0,bad:0}; q.ok?r.ok++:r.bad++; S.sent[q.sent.key]=r; logActivity(); save(); }
+  if(navigator.vibrate) navigator.vibrate(10);
+  X.i++; X.quit=false;
+  if(X.i>=X.qs.length) finishTest(); else { X.qt0=Date.now(); renderTest(); }
+}
+function finishTest(){
+  const ms=Date.now()-X.t0, right=X.qs.filter(q=>q.ok).length, cats={}, types={};
+  X.qs.forEach(q=>{ const c=q.type==='build'?'Sentences':BY_ID[q.id].cat; const o=cats[c]||(cats[c]={n:0,r:0}); o.n++; if(q.ok) o.r++;
+    const t=types[q.type]||(types[q.type]={n:0,r:0}); t.n++; if(q.ok) t.r++; });
+  const rec={date:new Date().toISOString(),n:X.qs.length,right,ms,cats,types,
+    qs:X.qs.map(q=>({type:q.type,id:q.id,ids:q.sent?q.sent.ids:undefined,en:q.sent?q.sent.en:undefined,typed:q.typed,ok:q.ok,ms:q.ms,marks:q.marks}))};
+  S.tests=[...(S.tests||[]),rec].slice(-60); save();
+  X.result=rec; X.stage='result'; renderTest();
+}
+const testMissIds=r=>[...new Set(r.qs.filter(q=>!q.ok).flatMap(q=>q.type==='build'?(q.ids||[]).filter((id,i)=>!q.marks||q.marks[i]==='bad'):[q.id]))].filter(id=>BY_ID[id]);
+function prevTest(r){ const H=S.tests||[]; const i=H.indexOf(r); return H.slice(0,i<0?H.length:i).reverse().find(x=>x.n===r.n)||null; }
+function renderTest(){
+  clearInterval(X.tick);
+  if(X.stage==='run') renderTestQ(); else if(X.stage==='result') renderTestResult(X.result); else renderTestSetup();
+  renderStat();
+}
+function renderTestSetup(){
+  const H=S.tests||[], last=H[H.length-1];
+  const daysAgo=last?Math.floor((Date.now()-new Date(last.date).getTime())/864e5):null;
+  const cadence=last?(daysAgo===0?'You already tested today':`Last test ${daysAgo} day${daysAgo===1?'':'s'} ago`):'No tests yet';
+  let html=`<div class="card"><div class="prompt">🎓 Test</div>
+    <div class="sub">Graded · no hints · one shot per question · timed.<br>Mixed: EN → Thai, Thai → EN, listening, tones and full sentences — weighted toward weak and older words, not just the newest.</div>
+    <div class="chips" id="xsize" style="justify-content:center;margin-top:16px;flex-wrap:wrap">${[10,20,30].map(n=>`<button class="chip ${X.size===n?'active':''}" data-n="${n}">${n} questions</button>`).join('')}</div>
+    <div class="row"><button class="btn gold" id="xstart">Start test →</button></div>
+    <div class="note" style="margin-top:14px;font-size:12.5px;color:var(--muted);line-height:1.5">${cadence}. A test is a measurement, not a drill — use it sparingly, about once a week. Practise daily; test occasionally to see where you actually are.</div>
+    ${daysAgo!=null&&daysAgo<5?`<div class="warn" style="display:block">You tested ${daysAgo===0?'today':daysAgo+' day'+(daysAgo===1?'':'s')+' ago'} — testing constantly is just practice with worse feedback. Weekly gives a clearer signal.</div>`:''}
+  </div>`;
+  if(H.length){
+    const recent=H.slice(-12), best=Math.max(...H.map(t=>t.right/t.n));
+    html+=`<div class="panel"><h2>History · ${H.length} test${H.length===1?'':'s'}</h2>
+      <div class="spark">${recent.map(t=>`<i class="${t.right/t.n>=best?'hi':''}" style="height:${Math.max(6,Math.round(t.right/t.n*100))}%" title="${fmtDate(t.date)}: ${t.right}/${t.n}"></i>`).join('')}</div>
+      ${H.slice().reverse().slice(0,15).map(t=>{ const pct=Math.round(t.right/t.n*100), pv=prevTest(t); const dS=pv?pct-Math.round(pv.right/pv.n*100):null, dT=pv?t.ms-pv.ms:null;
+        return `<div class="qrow"><div class="p"><b>${fmtDate(t.date)}</b> <small>· ${t.n} q</small><br><small>${t.right}/${t.n} · ${pct}% · ${fmtMs(t.ms)} · ${fmtSec(t.ms/t.n)}/q</small></div><div class="t">${deltaHtml(dS,'%',true)} ${deltaHtml(dT,'t',false)}</div></div>`; }).join('')}
+      <div class="note" style="font-size:11.5px;color:var(--muted);margin-top:8px">Arrows compare with your previous test of the same length: score up and time down are the good directions.</div></div>`;
+  }
+  stage().innerHTML=html;
+  $('xsize').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; X.size=+b.dataset.n; renderTest(); };
+  $('xstart').onclick=startTest;
+}
+function renderTestQ(){
+  const q=X.qs[X.i], n=X.qs.length, w=q.id?BY_ID[q.id]:null, voice=hasThaiVoice();
+  const form=(ph,th)=>`<form class="field" id="xform" autocomplete="off"><input id="xans" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="${ph}" ${th?'lang="th"':''}><button class="btn gold" type="submit" style="flex:0 0 auto;padding:14px 18px">Check</button></form>`;
+  let html=`<div class="barlabel"><span>Question ${X.i+1}/${n} · ${TEST_TYPES[q.type]}</span><span>⏱ <span id="xclock">${fmtMs(Date.now()-X.t0)}</span></span></div>
+    <div class="bar"><i style="width:${X.i/n*100}%"></i></div><div class="card pop">`;
+  if(q.type==='en2th') html+=`<div class="prompt">${esc(w.en)}</div><div class="sub">Type it in Thai — romanised or script, tones optional</div>${form('your answer…',true)}`;
+  else if(q.type==='th2en') html+=`<div class="prompt th">${esc(w.th)}</div><div class="rom" style="margin-top:4px">${esc(w.rom)}</div><div class="sub">Type the meaning in English</div>${form('meaning in English…')}`;
+  else if(q.type==='listen') html+=voice?`<button class="listen big" id="xplay" aria-label="play">🔊</button><div class="sub">Tap to listen (no auto-play), then type the meaning — or the Thai word</div>${form('meaning in English…')}`
+    :`<div class="prompt th">${esc(w.th)}</div><div class="sub">No Thai voice on this device — type the meaning of the word instead</div>${form('meaning in English…')}`;
+  else if(q.type==='tone') html+=`<div class="prompt th">${esc(w.th)}</div><div class="sub">${esc(w.en)}</div>${voice?'<button class="listen big" id="xplay" aria-label="play">🔊</button>':''}
+    <div class="tonegrid" id="xgrid">${TONES.map(t=>`<button class="tonebtn" data-t="${t.key}">${t.label} <span class="mark" style="color:var(--gold)">${t.mark}</span><small>${t.desc}</small></button>`).join('')}</div>`;
+  else html+=`<div class="prompt">${esc(q.sent.en)}${q.sent.polite?' <small style="color:var(--muted);font-weight:400;font-size:13px">+ khráp</small>':''}</div><div class="sub">Type the whole sentence in romanised Thai (or Thai script) — spaces and hyphens don't matter</div>${form('the whole sentence…',true)}`;
+  html+=`<div class="row" style="margin-top:10px"><button class="link" id="xskip">Skip (counts as wrong) →</button><button class="link" id="xquit">${X.quit?'Tap again to quit':'✕ Quit test'}</button></div></div>`;
+  stage().innerHTML=html;
+  const f=$('xform'); if(f){ f.onsubmit=e=>{ e.preventDefault(); testSubmit($('xans').value); }; $('xans').focus({preventScroll:true}); }
+  const g=$('xgrid'); if(g) g.onclick=e=>{ const b=e.target.closest('.tonebtn'); if(!b) return; testSubmit(b.dataset.t); };
+  const pl=$('xplay'); if(pl) pl.onclick=()=>speak(w.th);
+  $('xskip').onclick=()=>testSubmit('');
+  $('xquit').onclick=()=>{ if(X.quit){ X.stage='setup'; X.quit=false; X.qs=[]; renderTest(); toast('Test abandoned — nothing saved'); } else { X.quit=true; $('xquit').textContent='Tap again to quit'; } };
+  X.tick=setInterval(()=>{ const c=$('xclock'); if(!c||mode!=='test'){ clearInterval(X.tick); return; } c.textContent=fmtMs(Date.now()-X.t0); },1000);
+}
+function qPrompt(q){ const w=q.id?BY_ID[q.id]:null; return q.type==='build'?q.en:q.type==='en2th'?w.en:`${w.th} ${w.rom}`; }
+function qCorrect(q){ const w=q.id?BY_ID[q.id]:null;
+  if(q.type==='build') return `<span class="thai" style="font-size:18px">${(q.ids||[]).map(id=>esc(BY_ID[id].th)).join(' ')}</span> · ${(q.ids||[]).map((id,i)=>`<span style="${q.marks&&q.marks[i]==='bad'?'color:#f2c3b1;text-decoration:underline':''}">${esc(BY_ID[id].rom)}</span>`).join(' ')}`;
+  if(q.type==='tone'){ const t=TONES.find(x=>x.key===w.tone); return `${t?t.label:w.tone} tone (${t?t.mark:''}) · ${esc(w.rom)}`; }
+  if(q.type==='en2th') return `<span class="thai" style="font-size:18px">${esc(w.th)}</span> ${esc(w.rom)}`;
+  return esc(w.en);
+}
+function renderTestResult(r){
+  const pct=Math.round(r.right/r.n*100), pv=prevTest(r), miss=testMissIds(r), wrong=r.qs.filter(q=>!q.ok);
+  const dS=pv?pct-Math.round(pv.right/pv.n*100):null, dT=pv?r.ms-pv.ms:null;
+  const slow=Math.max(...r.qs.map(q=>q.ms));
+  const bars=(obj,label)=>Object.entries(obj).sort((a,b)=>(a[1].r/a[1].n)-(b[1].r/b[1].n)||b[1].n-a[1].n).map(([k,o])=>`<div class="mrow"><div class="n">${esc(label?label(k):k)}</div><div class="stack"><i class="s" style="width:${o.r/o.n*100}%"></i><i class="w" style="width:${(o.n-o.r)/o.n*100}%"></i></div><div class="c">${o.r}/${o.n}</div></div>`).join('');
+  let html=`<div class="card pop"><div class="summary"><div class="big">${r.right}/${r.n}</div>
+      <p><b style="color:var(--cream)">${pct}%</b> · ${fmtMs(r.ms)} total · ${fmtSec(r.ms/r.n)} per question<br>
+      ${pv?`vs your last ${r.n}-question test (${fmtDate(pv.date)}): ${deltaHtml(dS,'%',true)} score · ${deltaHtml(dT,'t',false)} time`:`First ${r.n}-question test — do another in a week or so to compare.`}</p></div>
+    <div class="row">${miss.length?`<button class="btn miss" id="xpractice">Practise the ${miss.length} missed word${miss.length===1?'':'s'} →</button>`:''}<button class="btn ${miss.length?'ghost':'gold'}" id="xdone">Done</button></div></div>
+    <div class="panel"><h2>Accuracy by category</h2>${bars(r.cats)}<div class="legend"><span><i style="background:var(--jade)"></i>right</span><span><i style="background:var(--clay)"></i>wrong</span></div></div>
+    <div class="panel"><h2>By question type</h2>${bars(r.types,k=>TEST_TYPES[k]||k)}</div>
+    <div class="panel"><h2>Wrong answers · ${wrong.length}</h2>${wrong.length?`<div class="list">`+wrong.map(q=>{ const w=q.id?BY_ID[q.id]:null; const typed=q.type==='tone'?(TONES.find(t=>t.key===q.typed)||{}).label||'—':q.typed||'—';
+        return `<div class="item" ${w?`data-say="${esc(w.th)}"`:q.ids?`data-say="${esc(q.ids.map(id=>BY_ID[id].th).join(''))}"`:''}><div class="en"><span class="badge b-learn" style="margin-right:6px">${TEST_TYPES[q.type]}</span>${esc(qPrompt(q))}<small>you: “${esc(typed)}”</small><small style="color:#bfe8d4">✓ ${qCorrect(q)}</small></div><div class="rom" style="color:var(--muted);font-size:12px">${fmtSec(q.ms)}</div></div>`; }).join('')+`</div>`:`<div class="empty" style="padding:14px">Nothing wrong — full marks 🎉</div>`}</div>
+    <div class="panel"><h2>Every question · time</h2>${r.qs.map((q,i)=>`<div class="qrow"><div class="k">${q.ok?'<span style="color:var(--jade)">✓</span>':'<span style="color:var(--clay)">✗</span>'}</div><div class="p">${esc(qPrompt(q))} <small>· ${TEST_TYPES[q.type]}</small></div><div class="t ${q.ms===slow&&r.n>1?'slow':''}">${fmtSec(q.ms)}</div></div>`).join('')}
+      <div class="note" style="font-size:11.5px;color:var(--muted);margin-top:8px">Per-question time is wall-clock from the question appearing to your answer. Slowest in red.</div></div>`;
+  stage().innerHTML=html;
+  document.querySelectorAll('.item[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say));
+  const xp=$('xpractice'); if(xp) xp.onclick=()=>{ P.testIds=miss; P.filter="Test"; if(P.userSub==='shadow') P.userSub='type'; P.sub=P.userSub; resetQ(); setMode('practice'); toast(`Practising the ${miss.length} words you missed`); };
+  $('xdone').onclick=()=>{ X.stage='setup'; renderTest(); };
+}
+
+// ---------------------------------------------------------------------
 //  PROGRESS
 // ---------------------------------------------------------------------
 function renderProgress(){
@@ -1337,7 +1585,7 @@ function renderProgress(){
   $('export').onclick=()=>{ const io=$('io'); io.style.display='block'; io.value=JSON.stringify(S); io.select(); try{ navigator.clipboard.writeText(io.value); toast('Copied to clipboard'); }catch(e){} };
   $('import').onclick=()=>{ const io=$('io'); if(io.style.display==='none'){ io.style.display='block'; io.value=''; io.placeholder='Paste your exported JSON here, then press Import again.'; io.focus(); return; }
     try{ importState(JSON.parse(io.value)); toast('Progress imported'); renderProgress(); }catch(e){ toast('That is not valid export data'); } };
-  $('reset').onclick=()=>{ if(!confirm('Reset all progress on this device? This cannot be undone.')) return; S={v:3,stats:{},activity:{},sent:{},pat:{},tone:{},notes:{},review:null,settings:S.settings}; save(); P={...P,cur:null,phase:"ask",session:{n:0,right:0}}; B={...B,cur:null,right:0,n:0,pn:0,pright:0}; T={...T,cur:null,right:0,n:0}; toast('Progress reset'); renderProgress(); };
+  $('reset').onclick=()=>{ if(!confirm('Reset all progress on this device? This cannot be undone.')) return; S={v:3,stats:{},activity:{},sent:{},pat:{},tone:{},notes:{},review:null,tests:[],settings:S.settings}; save(); P={...P,cur:null,phase:"ask",session:{n:0,right:0}}; B={...B,cur:null,right:0,n:0,pn:0,pright:0}; T={...T,cur:null,right:0,n:0}; toast('Progress reset'); renderProgress(); };
   renderStat();
 }
 
@@ -1375,8 +1623,9 @@ const FOOT={
   today:"Daily review = due words from earlier days + today's words, both directions, one pass. Or pick a single day to drill.",
   practice:"Type the answer, then Check. Romanised spelling is matched leniently (khao / kao / khâao all count). Each direction is tracked separately — a word is solid only when you own it both ways.",
   learn:"Flip cards by tapping, swipe for next. Use the search to look up any word.",
-  build:"Sentences are generated fresh from your word bank — endless variety, always translated. Tiles = put the words in order. Type it = write the whole sentence yourself. Patterns = learn the frame, swap the slot. Thai word order is mostly Subject–Verb–Object; question particles (ไหม) go at the end.",
+  build:"Sentences are generated fresh from your word bank — endless variety, always translated. EN → Thai: Tiles = put the Thai words in order, Type it = write the whole sentence yourself. Thai → EN: read the Thai and give the English (tiles or typed; wording is forgiven). Patterns = learn the frame, swap the slot. Thai word order is mostly Subject–Verb–Object; question particles (ไหม) go at the end.",
   tones:"Thai has 5 tones — the same syllable with a different tone is a different word. Words you miss come up more often; “Missed” drills only those.",
+  test:"A graded check, not a drill: no hints, no show-answer, no auto-play, one shot per question, stricter matching. Use it about once a week to measure; practise daily in between.",
   progress:"Progress is saved in this browser only. Export it to move to another device."
 };
 function setMode(m){
@@ -1389,6 +1638,7 @@ function render(){
   else if(mode==="learn") renderLearn();
   else if(mode==="build") renderBuild();
   else if(mode==="tones") renderTones();
+  else if(mode==="test") renderTest();
   else renderProgress();
 }
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
