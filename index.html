@@ -653,7 +653,7 @@ function renderPractice(){
   html+=`
     ${todayMode?todayHeader(R):`<div class="chips" id="chips">${filters.map(f=>{
       const n=cnt(f); const cls=f==="Weak"||f==="Test"?"clay":f==="Due"?"jade":"";
-      return `<button class="chip ${cls} ${f===P.filter?'active':''}" data-f="${f}">${f==="Test"?"🎓 Test misses":f}${["Due","Weak","New","Test"].includes(f)?` ${n}`:''}</button>`; }).join('')}</div>`}
+      return `<button class="chip ${cls} ${f===P.filter?'active':''}" data-f="${f}">${f==="Test"?"🎓 Shaky from test":f}${["Due","Weak","New","Test"].includes(f)?` ${n}`:''}</button>`; }).join('')}</div>`}
     <div class="barlabel"><span>Today ${Math.min(tc,goal)}/${goal}${tc>=goal?' ✓ goal reached':''}</span><span>${review?`Review ${Math.min(R.i,R.queue.length)}/${R.queue.length}`:`Session ${P.session.right}/${P.session.n}`}</span></div>
     <div class="bar ${tc>=goal?'jade':''}"><i style="width:${Math.min(100,tc/goal*100)}%"></i></div>`;
 
@@ -1399,107 +1399,120 @@ function renderTones(){
 }
 
 // ---------------------------------------------------------------------
-//  TEST  (graded assessment: fixed length, mixed question types, no hints,
-//  no "show answer", no autoplay, one shot per question, timed; results
-//  are saved to S.tests so attempts can be compared over time)
+//  TEST  (readiness check for a day: every word of that day, typed in BOTH
+//  directions, plus a few sentences from that day's words; no hints, no
+//  show-answer, no audio, one shot, timed per answer; strict matching but
+//  tones optional. Ends with a decisive verdict — ready / almost / not
+//  ready — and flags the words that cost you the most time. "All days"
+//  samples the whole bank instead, for an occasional overall measurement.)
 // ---------------------------------------------------------------------
-let X={stage:"setup",size:20,qs:[],i:0,t0:0,qt0:0,quit:false,result:null,tick:null};
-const TEST_TYPES={en2th:"EN → Thai",th2en:"Thai → EN",listen:"Listening",tone:"Tone",build:"Sentence"};
+let X={stage:"setup",day:null,size:15,qs:[],i:0,t0:0,qt0:0,quit:false,result:null,tick:null};
+const TEST_TYPES={en2th:"EN → Thai",th2en:"Thai → EN",build:"Sentence"};
+const SLOW_MIN=3500;                                                   // an answer is "slow" only if it took longer than this AND well over your median
 const fmtMs=ms=>{ const s=Math.round(ms/1000); return s>=60?`${Math.floor(s/60)}m ${String(s%60).padStart(2,'0')}s`:`${s}s`; };
 const fmtSec=ms=>(ms/1000).toFixed(1)+'s';
 const fmtDate=iso=>{ const d=new Date(iso); return d.toLocaleDateString(undefined,{day:'numeric',month:'short'}); };
 const deltaHtml=(d,unit,goodUp)=>{ if(d==null) return ''; const up=d>0, cls=d===0?'flat':(up===goodUp?'up':'down'); return `<span class="delta ${cls}">${d===0?'=':(up?'▲':'▼')} ${unit==='%'?Math.abs(d)+'%':fmtMs(Math.abs(d))}</span>`; };
-function testWeight(w){ // assessment sampling: weak, older and long-unseen words count more — nothing is excluded
+const testDay=()=>X.day==null?NEWEST_DAY():X.day;                     // null → newest day; 'all' → whole bank
+const testLabel=r=>r.day==='all'?`All days · ${r.words} words`:`Day ${r.day}`;
+function testWeight(w){ // "All days" sampling: weak, older and long-unseen words count more — nothing is excluded
   const a=stD(w.id,'th'), b=stD(w.id,'en'), wrong=a.wrong+b.wrong, last=Math.max(a.last,b.last);
   const stale=last?Math.min(30,(Date.now()-last)/864e5):12, age=NEWEST_DAY()-w.day;
   return 1 + wrong*1.2 + (isWeak(w.id)?2:0) + Math.min(4,age*.5) + stale*.15;
 }
 function wsample(pool,n,wf){ const out=[], c=pool.slice(); while(out.length<n&&c.length){ const ws=c.map(wf), tot=ws.reduce((a,x)=>a+x,0); let r=Math.random()*tot, k=c.length-1; for(let i=0;i<c.length;i++){ r-=ws[i]; if(r<=0){ k=i; break; } } out.push(c[k]); c.splice(k,1); } return out; }
-function buildTest(n){
-  const voice=hasThaiVoice();
-  const nBuild=Math.max(1,Math.round(n*.2)), nTone=Math.max(1,Math.round(n*.15)), nListen=voice?Math.round(n*.2):0;
-  // sentences: generated fresh with neutral settings (no focus day, not "harder", EN → Thai), no repeats
+function testSentences(day,n){ // fresh sentences, neutral settings; for a day, only sentences that use that day's words
   const built=[], keep={r:B.recent,f:B.recentFrames,fd:S.settings.focusDay,h:S.settings.buildHard,d:S.settings.buildDir};
-  B.recent=[]; B.recentFrames=[]; S.settings.focusDay=0; S.settings.buildHard=false; S.settings.buildDir='th';
-  try{ for(let k=0;k<nBuild*4&&built.length<nBuild;k++){ const s=genSentence(); if(!s) break; if(built.some(x=>x.key===s.key)) continue; built.push(s); B.recent.unshift(s.key); B.recentFrames=[s.frame,...B.recentFrames].slice(0,4); } }
+  B.recent=[]; B.recentFrames=[]; S.settings.focusDay=day==='all'?0:day; S.settings.buildHard=false; S.settings.buildDir='th';
+  try{ for(let k=0;k<n*6&&built.length<n;k++){ const s=genSentence(); if(!s) break; if(built.some(x=>x.key===s.key)) continue; if(day!=='all'&&!s.ids.some(id=>BY_ID[id].day===day)) continue; built.push(s); B.recent.unshift(s.key); B.recentFrames=[s.frame,...B.recentFrames].slice(0,4); } }
   finally{ B.recent=keep.r; B.recentFrames=keep.f; S.settings.focusDay=keep.fd; S.settings.buildHard=keep.h; S.settings.buildDir=keep.d; }
-  const words=wsample(WORDS,Math.min(n-built.length,WORDS.length),testWeight);
-  const toneWords=words.filter(w=>!w.tone.includes('+')).slice(0,nTone);
-  const rest=words.filter(w=>!toneWords.includes(w)), listenWords=rest.slice(0,nListen), typed=rest.slice(nListen);
-  const qs=built.map(s=>({type:'build',sent:s}));
-  toneWords.forEach(w=>qs.push({type:'tone',id:w.id}));
-  listenWords.forEach(w=>qs.push({type:'listen',id:w.id}));
-  typed.forEach((w,i)=>qs.push({type:i%2?'th2en':'en2th',id:w.id}));
-  return shuffle(qs).map(q=>({...q,typed:'',ok:null,ms:0}));
+  return built;
 }
-function startTest(){ X.qs=buildTest(X.size); if(!X.qs.length){ toast('Nothing to test yet'); return; } X.i=0; X.t0=X.qt0=Date.now(); X.quit=false; X.result=null; X.stage='run'; renderTest(); }
+function buildTest(day){
+  const words=day==='all'?wsample(WORDS,Math.min(X.size,WORDS.length),testWeight):WORDS.filter(w=>w.day===day);
+  if(!words.length) return [];
+  const qs=[]; words.forEach(w=>{ qs.push({type:'en2th',id:w.id}); qs.push({type:'th2en',id:w.id}); });
+  testSentences(day,Math.min(4,Math.max(2,Math.round(words.length/3)))).forEach(s=>qs.push({type:'build',sent:s}));
+  shuffle(qs);
+  for(let i=1;i<qs.length;i++) if(qs[i].id&&qs[i].id===qs[i-1].id){ const j=qs.findIndex((q,k)=>k>i&&q.id!==qs[i-1].id&&(k+1>=qs.length||qs[k+1].id!==qs[i].id)); if(j>0) [qs[i],qs[j]]=[qs[j],qs[i]]; } // no word twice in a row
+  return qs.map(q=>({...q,typed:'',ok:null,ms:0}));
+}
+function startTest(){ const day=testDay(); X.qs=buildTest(day); if(!X.qs.length){ toast('No words in that day yet'); return; } X.runDay=day; X.i=0; X.t0=X.qt0=Date.now(); X.quit=false; X.result=null; X.stage='run'; renderTest(); }
 function testSubmit(val){
   const q=X.qs[X.i]; if(!q) return; const w=q.id?BY_ID[q.id]:null; q.typed=val; q.ms=Date.now()-X.qt0;
   if(q.type==='en2th'){ q.ok=checkThaiStrict(w,val); record(w.id,q.ok,'th'); }
   else if(q.type==='th2en'){ q.ok=checkEnStrict(w,val); record(w.id,q.ok,'en'); }
-  else if(q.type==='listen'){ q.ok=checkEnStrict(w,val)||checkThaiStrict(w,val); record(w.id,q.ok,'en'); }
-  else if(q.type==='tone'){ q.ok=val===w.tone; const r=S.tone[w.id]||{ok:0,bad:0}; q.ok?r.ok++:r.bad++; S.tone[w.id]=r; logActivity(); save(); }
   else { q.marks=matchSentence(q.sent.ids,val,true); q.ok=!q.marks.includes('bad'); const r=S.sent[q.sent.key]||{ok:0,bad:0}; q.ok?r.ok++:r.bad++; S.sent[q.sent.key]=r; logActivity(); save(); }
   if(navigator.vibrate) navigator.vibrate(10);
   X.i++; X.quit=false;
   if(X.i>=X.qs.length) finishTest(); else { X.qt0=Date.now(); renderTest(); }
 }
+function median(a){ if(!a.length) return 0; const s=a.slice().sort((x,y)=>x-y), m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; }
 function finishTest(){
-  const ms=Date.now()-X.t0, right=X.qs.filter(q=>q.ok).length, cats={}, types={};
-  X.qs.forEach(q=>{ const c=q.type==='build'?'Sentences':BY_ID[q.id].cat; const o=cats[c]||(cats[c]={n:0,r:0}); o.n++; if(q.ok) o.r++;
-    const t=types[q.type]||(types[q.type]={n:0,r:0}); t.n++; if(q.ok) t.r++; });
-  const rec={date:new Date().toISOString(),n:X.qs.length,right,ms,cats,types,
+  const ms=Date.now()-X.t0, right=X.qs.filter(q=>q.ok).length;
+  const wq=X.qs.filter(q=>q.id), med=median(wq.map(q=>q.ms)), thr=Math.max(SLOW_MIN,med*1.6);
+  const slow=[...new Set(wq.filter(q=>q.ms>thr).map(q=>q.id))];                   // words that took you noticeably longer than your own median
+  const rec={date:new Date().toISOString(),day:X.runDay,words:new Set(wq.map(q=>q.id)).size,n:X.qs.length,right,ms,med,thr,slow,
     qs:X.qs.map(q=>({type:q.type,id:q.id,ids:q.sent?q.sent.ids:undefined,en:q.sent?q.sent.en:undefined,typed:q.typed,ok:q.ok,ms:q.ms,marks:q.marks}))};
-  S.tests=[...(S.tests||[]),rec].slice(-60); save();
+  rec.verdict=testVerdict(rec).level;
+  S.tests=[...(S.tests||[]),rec].slice(-80); save();
   X.result=rec; X.stage='result'; renderTest();
 }
-const testMissIds=r=>[...new Set(r.qs.filter(q=>!q.ok).flatMap(q=>q.type==='build'?(q.ids||[]).filter((id,i)=>!q.marks||q.marks[i]==='bad'):[q.id]))].filter(id=>BY_ID[id]);
-function prevTest(r){ const H=S.tests||[]; const i=H.indexOf(r); return H.slice(0,i<0?H.length:i).reverse().find(x=>x.n===r.n)||null; }
+// Decisive verdict. ready = you own the day: EVERY word right in both directions, at most ~1 in 5 words slow, and at least
+// half the sentences. almost = ≥75% of word answers right and at most ~2 in 5 words shaky (wrong or slow). Otherwise not ready.
+function testVerdict(r){
+  const wq=r.qs.filter(q=>q.id), sq=r.qs.filter(q=>q.type==='build');
+  const acc=wq.length?wq.filter(q=>q.ok).length/wq.length:0;
+  const dir=d=>{ const x=wq.filter(q=>q.type===d); return {n:x.length,r:x.filter(q=>q.ok).length,acc:x.length?x.filter(q=>q.ok).length/x.length:1}; };
+  const th=dir('en2th'), en=dir('th2en'), sAcc=sq.length?sq.filter(q=>q.ok).length/sq.length:1;
+  const wrongIds=[...new Set(wq.filter(q=>!q.ok).map(q=>q.id))], slow=(r.slow||[]).filter(id=>!wrongIds.includes(id));
+  const shaky=[...wrongIds,...slow], nW=r.words||new Set(wq.map(q=>q.id)).size||1;
+  let level='not';
+  if(!wrongIds.length && slow.length<=Math.max(1,Math.round(nW*.2)) && sAcc>=.5) level='ready';
+  else if(acc>=.75 && shaky.length<=Math.round(nW*.4)) level='almost';
+  return {level,acc,th,en,sAcc,wrongIds,slow,shaky,sq};
+}
+const VERDICT={ready:{icon:'✅',title:'Ready',cls:'ok'},almost:{icon:'🟡',title:'Almost — not yet',cls:'close'},not:{icon:'🔴',title:'Not ready',cls:'bad'}};
+const testMissIds=r=>testVerdict(r).shaky.filter(id=>BY_ID[id]);
+function prevTest(r){ const H=S.tests||[]; const i=H.indexOf(r); return H.slice(0,i<0?H.length:i).reverse().find(x=>x.day===r.day&&(r.day!=='all'||x.words===r.words))||null; }
 function renderTest(){
   clearInterval(X.tick);
   if(X.stage==='run') renderTestQ(); else if(X.stage==='result') renderTestResult(X.result); else renderTestSetup();
   renderStat();
 }
 function renderTestSetup(){
-  const H=S.tests||[], last=H[H.length-1];
-  const daysAgo=last?Math.floor((Date.now()-new Date(last.date).getTime())/864e5):null;
-  const cadence=last?(daysAgo===0?'You already tested today':`Last test ${daysAgo} day${daysAgo===1?'':'s'} ago`):'No tests yet';
+  const H=S.tests||[], day=testDay(), nd=NEWEST_DAY(), all=day==='all';
+  const ws=all?[]:WORDS.filter(w=>w.day===day), nQ=all?X.size*2+Math.min(4,Math.max(2,Math.round(X.size/3))):ws.length*2+Math.min(4,Math.max(2,Math.round(ws.length/3)));
+  const lastDay=H.slice().reverse().find(t=>t.day===day);
   let html=`<div class="card"><div class="prompt">🎓 Test</div>
-    <div class="sub">Graded · no hints · one shot per question · timed.<br>Mixed: EN → Thai, Thai → EN, listening, tones and full sentences — weighted toward weak and older words, not just the newest.</div>
-    <div class="chips" id="xsize" style="justify-content:center;margin-top:16px;flex-wrap:wrap">${[10,20,30].map(n=>`<button class="chip ${X.size===n?'active':''}" data-n="${n}">${n} questions</button>`).join('')}</div>
-    <div class="row"><button class="btn gold" id="xstart">Start test →</button></div>
-    <div class="note" style="margin-top:14px;font-size:12.5px;color:var(--muted);line-height:1.5">${cadence}. A test is a measurement, not a drill — use it sparingly, about once a week. Practise daily; test occasionally to see where you actually are.</div>
-    ${daysAgo!=null&&daysAgo<5?`<div class="warn" style="display:block">You tested ${daysAgo===0?'today':daysAgo+' day'+(daysAgo===1?'':'s')+' ago'} — testing constantly is just practice with worse feedback. Weekly gives a clearer signal.</div>`:''}
+    <div class="sub">Are you ready to move on? Pick a day: every word of it, typed <b>both ways</b>, plus a few sentences from those words. No hints, no audio, one shot, timed — tones optional. Ends with a verdict.</div>
+    <div class="chips" id="xday" style="justify-content:center;margin-top:16px;flex-wrap:wrap">${DAYS().map(d=>`<button class="chip ${!all&&day===d?'active':''}" data-d="${d}">Day ${d}${d===nd?' · newest':''}</button>`).join('')}<button class="chip jade ${all?'active':''}" data-d="all">All days</button></div>
+    ${all?`<div class="chips" id="xsize" style="justify-content:center;flex-wrap:wrap">${[10,15,20].map(n=>`<button class="chip ${X.size===n?'active':''}" data-n="${n}">${n} words</button>`).join('')}</div>`:''}
+    <div class="row"><button class="btn gold" id="xstart">${all?`Test ${X.size} words`:`Test Day ${day}`} → <small style="font-weight:500;opacity:.8">${nQ} questions</small></button></div>
+    <div class="note" style="margin-top:14px;font-size:12.5px;color:var(--muted);line-height:1.5">${lastDay?`Last ${all?'all-days':'Day '+day} test: ${VERDICT[lastDay.verdict||'not'].icon} ${VERDICT[lastDay.verdict||'not'].title.toLowerCase()} · ${lastDay.right}/${lastDay.n} · ${fmtMs(lastDay.ms)} (${fmtDate(lastDay.date)}).`:all?'No all-days test yet.':`Day ${day} hasn't been tested yet.`}<br>${all?'A measurement, not a drill — about once a week is plenty.':'Test a day when you think you own it, before you add the next one. Practise in between, not test.'}</div>
   </div>`;
   if(H.length){
-    const recent=H.slice(-12), best=Math.max(...H.map(t=>t.right/t.n));
     html+=`<div class="panel"><h2>History · ${H.length} test${H.length===1?'':'s'}</h2>
-      <div class="spark">${recent.map(t=>`<i class="${t.right/t.n>=best?'hi':''}" style="height:${Math.max(6,Math.round(t.right/t.n*100))}%" title="${fmtDate(t.date)}: ${t.right}/${t.n}"></i>`).join('')}</div>
-      ${H.slice().reverse().slice(0,15).map(t=>{ const pct=Math.round(t.right/t.n*100), pv=prevTest(t); const dS=pv?pct-Math.round(pv.right/pv.n*100):null, dT=pv?t.ms-pv.ms:null;
-        return `<div class="qrow"><div class="p"><b>${fmtDate(t.date)}</b> <small>· ${t.n} q</small><br><small>${t.right}/${t.n} · ${pct}% · ${fmtMs(t.ms)} · ${fmtSec(t.ms/t.n)}/q</small></div><div class="t">${deltaHtml(dS,'%',true)} ${deltaHtml(dT,'t',false)}</div></div>`; }).join('')}
-      <div class="note" style="font-size:11.5px;color:var(--muted);margin-top:8px">Arrows compare with your previous test of the same length: score up and time down are the good directions.</div></div>`;
+      ${H.slice().reverse().slice(0,15).map(t=>{ const pct=Math.round(t.right/t.n*100), pv=prevTest(t), v=VERDICT[t.verdict||'not']; const dS=pv?pct-Math.round(pv.right/pv.n*100):null, dT=pv?t.ms-pv.ms:null;
+        return `<div class="qrow"><div class="k">${v.icon}</div><div class="p"><b>${esc(testLabel(t))}</b> <small>· ${fmtDate(t.date)}</small><br><small>${v.title} · ${t.right}/${t.n} · ${pct}% · ${fmtMs(t.ms)}${t.slow&&t.slow.length?` · 🐢 ${t.slow.length}`:''}</small></div><div class="t">${deltaHtml(dS,'%',true)} ${deltaHtml(dT,'t',false)}</div></div>`; }).join('')}
+      <div class="note" style="font-size:11.5px;color:var(--muted);margin-top:8px">Arrows compare with your previous test of the same day: score up and time down are the good directions. 🐢 = words that took you noticeably longer than the rest.</div></div>`;
   }
   stage().innerHTML=html;
-  $('xsize').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; X.size=+b.dataset.n; renderTest(); };
+  $('xday').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; X.day=b.dataset.d==='all'?'all':+b.dataset.d; renderTest(); };
+  const xs=$('xsize'); if(xs) xs.onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; X.size=+b.dataset.n; renderTest(); };
   $('xstart').onclick=startTest;
 }
 function renderTestQ(){
-  const q=X.qs[X.i], n=X.qs.length, w=q.id?BY_ID[q.id]:null, voice=hasThaiVoice();
+  const q=X.qs[X.i], n=X.qs.length, w=q.id?BY_ID[q.id]:null;
   const form=(ph,th)=>`<form class="field" id="xform" autocomplete="off"><input id="xans" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="${ph}" ${th?'lang="th"':''}><button class="btn gold" type="submit" style="flex:0 0 auto;padding:14px 18px">Check</button></form>`;
-  let html=`<div class="barlabel"><span>Question ${X.i+1}/${n} · ${TEST_TYPES[q.type]}</span><span>⏱ <span id="xclock">${fmtMs(Date.now()-X.t0)}</span></span></div>
+  let html=`<div class="barlabel"><span>${X.runDay==='all'?'All days':'Day '+X.runDay} · ${X.i+1}/${n} · ${TEST_TYPES[q.type]}</span><span>⏱ <span id="xclock">${fmtMs(Date.now()-X.t0)}</span></span></div>
     <div class="bar"><i style="width:${X.i/n*100}%"></i></div><div class="card pop">`;
   if(q.type==='en2th') html+=`<div class="prompt">${esc(w.en)}</div><div class="sub">Type it in Thai — romanised or script, tones optional</div>${form('your answer…',true)}`;
   else if(q.type==='th2en') html+=`<div class="prompt th">${esc(w.th)}</div><div class="rom" style="margin-top:4px">${esc(w.rom)}</div><div class="sub">Type the meaning in English</div>${form('meaning in English…')}`;
-  else if(q.type==='listen') html+=voice?`<button class="listen big" id="xplay" aria-label="play">🔊</button><div class="sub">Tap to listen (no auto-play), then type the meaning — or the Thai word</div>${form('meaning in English…')}`
-    :`<div class="prompt th">${esc(w.th)}</div><div class="sub">No Thai voice on this device — type the meaning of the word instead</div>${form('meaning in English…')}`;
-  else if(q.type==='tone') html+=`<div class="prompt th">${esc(w.th)}</div><div class="sub">${esc(w.en)}</div>${voice?'<button class="listen big" id="xplay" aria-label="play">🔊</button>':''}
-    <div class="tonegrid" id="xgrid">${TONES.map(t=>`<button class="tonebtn" data-t="${t.key}">${t.label} <span class="mark" style="color:var(--gold)">${t.mark}</span><small>${t.desc}</small></button>`).join('')}</div>`;
   else html+=`<div class="prompt">${esc(q.sent.en)}${q.sent.polite?' <small style="color:var(--muted);font-weight:400;font-size:13px">+ khráp</small>':''}</div><div class="sub">Type the whole sentence in romanised Thai (or Thai script) — spaces and hyphens don't matter</div>${form('the whole sentence…',true)}`;
   html+=`<div class="row" style="margin-top:10px"><button class="link" id="xskip">Skip (counts as wrong) →</button><button class="link" id="xquit">${X.quit?'Tap again to quit':'✕ Quit test'}</button></div></div>`;
   stage().innerHTML=html;
-  const f=$('xform'); if(f){ f.onsubmit=e=>{ e.preventDefault(); testSubmit($('xans').value); }; $('xans').focus({preventScroll:true}); }
-  const g=$('xgrid'); if(g) g.onclick=e=>{ const b=e.target.closest('.tonebtn'); if(!b) return; testSubmit(b.dataset.t); };
-  const pl=$('xplay'); if(pl) pl.onclick=()=>speak(w.th);
+  const f=$('xform'); f.onsubmit=e=>{ e.preventDefault(); testSubmit($('xans').value); }; $('xans').focus({preventScroll:true});
   $('xskip').onclick=()=>testSubmit('');
   $('xquit').onclick=()=>{ if(X.quit){ X.stage='setup'; X.quit=false; X.qs=[]; renderTest(); toast('Test abandoned — nothing saved'); } else { X.quit=true; $('xquit').textContent='Tap again to quit'; } };
   X.tick=setInterval(()=>{ const c=$('xclock'); if(!c||mode!=='test'){ clearInterval(X.tick); return; } c.textContent=fmtMs(Date.now()-X.t0); },1000);
@@ -1507,28 +1520,39 @@ function renderTestQ(){
 function qPrompt(q){ const w=q.id?BY_ID[q.id]:null; return q.type==='build'?q.en:q.type==='en2th'?w.en:`${w.th} ${w.rom}`; }
 function qCorrect(q){ const w=q.id?BY_ID[q.id]:null;
   if(q.type==='build') return `<span class="thai" style="font-size:18px">${(q.ids||[]).map(id=>esc(BY_ID[id].th)).join(' ')}</span> · ${(q.ids||[]).map((id,i)=>`<span style="${q.marks&&q.marks[i]==='bad'?'color:#f2c3b1;text-decoration:underline':''}">${esc(BY_ID[id].rom)}</span>`).join(' ')}`;
-  if(q.type==='tone'){ const t=TONES.find(x=>x.key===w.tone); return `${t?t.label:w.tone} tone (${t?t.mark:''}) · ${esc(w.rom)}`; }
   if(q.type==='en2th') return `<span class="thai" style="font-size:18px">${esc(w.th)}</span> ${esc(w.rom)}`;
   return esc(w.en);
 }
 function renderTestResult(r){
-  const pct=Math.round(r.right/r.n*100), pv=prevTest(r), miss=testMissIds(r), wrong=r.qs.filter(q=>!q.ok);
-  const dS=pv?pct-Math.round(pv.right/pv.n*100):null, dT=pv?r.ms-pv.ms:null;
-  const slow=Math.max(...r.qs.map(q=>q.ms));
-  const bars=(obj,label)=>Object.entries(obj).sort((a,b)=>(a[1].r/a[1].n)-(b[1].r/b[1].n)||b[1].n-a[1].n).map(([k,o])=>`<div class="mrow"><div class="n">${esc(label?label(k):k)}</div><div class="stack"><i class="s" style="width:${o.r/o.n*100}%"></i><i class="w" style="width:${(o.n-o.r)/o.n*100}%"></i></div><div class="c">${o.r}/${o.n}</div></div>`).join('');
-  let html=`<div class="card pop"><div class="summary"><div class="big">${r.right}/${r.n}</div>
-      <p><b style="color:var(--cream)">${pct}%</b> · ${fmtMs(r.ms)} total · ${fmtSec(r.ms/r.n)} per question<br>
-      ${pv?`vs your last ${r.n}-question test (${fmtDate(pv.date)}): ${deltaHtml(dS,'%',true)} score · ${deltaHtml(dT,'t',false)} time`:`First ${r.n}-question test — do another in a week or so to compare.`}</p></div>
-    <div class="row">${miss.length?`<button class="btn miss" id="xpractice">Practise the ${miss.length} missed word${miss.length===1?'':'s'} →</button>`:''}<button class="btn ${miss.length?'ghost':'gold'}" id="xdone">Done</button></div></div>
-    <div class="panel"><h2>Accuracy by category</h2>${bars(r.cats)}<div class="legend"><span><i style="background:var(--jade)"></i>right</span><span><i style="background:var(--clay)"></i>wrong</span></div></div>
-    <div class="panel"><h2>By question type</h2>${bars(r.types,k=>TEST_TYPES[k]||k)}</div>
-    <div class="panel"><h2>Wrong answers · ${wrong.length}</h2>${wrong.length?`<div class="list">`+wrong.map(q=>{ const w=q.id?BY_ID[q.id]:null; const typed=q.type==='tone'?(TONES.find(t=>t.key===q.typed)||{}).label||'—':q.typed||'—';
-        return `<div class="item" ${w?`data-say="${esc(w.th)}"`:q.ids?`data-say="${esc(q.ids.map(id=>BY_ID[id].th).join(''))}"`:''}><div class="en"><span class="badge b-learn" style="margin-right:6px">${TEST_TYPES[q.type]}</span>${esc(qPrompt(q))}<small>you: “${esc(typed)}”</small><small style="color:#bfe8d4">✓ ${qCorrect(q)}</small></div><div class="rom" style="color:var(--muted);font-size:12px">${fmtSec(q.ms)}</div></div>`; }).join('')+`</div>`:`<div class="empty" style="padding:14px">Nothing wrong — full marks 🎉</div>`}</div>
-    <div class="panel"><h2>Every question · time</h2>${r.qs.map((q,i)=>`<div class="qrow"><div class="k">${q.ok?'<span style="color:var(--jade)">✓</span>':'<span style="color:var(--clay)">✗</span>'}</div><div class="p">${esc(qPrompt(q))} <small>· ${TEST_TYPES[q.type]}</small></div><div class="t ${q.ms===slow&&r.n>1?'slow':''}">${fmtSec(q.ms)}</div></div>`).join('')}
-      <div class="note" style="font-size:11.5px;color:var(--muted);margin-top:8px">Per-question time is wall-clock from the question appearing to your answer. Slowest in red.</div></div>`;
+  const V=testVerdict(r), v=VERDICT[V.level], pct=Math.round(r.right/r.n*100), pv=prevTest(r), miss=testMissIds(r), wrong=r.qs.filter(q=>!q.ok);
+  const dS=pv?pct-Math.round(pv.right/pv.n*100):null, dT=pv?r.ms-pv.ms:null, day=r.day, nextDay=day==='all'?null:DAYS().find(d=>d>day);
+  const sq={n:V.sq.length,r:V.sq.filter(q=>q.ok).length};
+  const names=ids=>ids.map(id=>`<b style="color:var(--cream)">${esc(BY_ID[id].rom)}</b> <small>${esc(BY_ID[id].en.split('/')[0].replace(/\(.*\)/,'').trim())}</small>`).join(', ');
+  const why=V.level==='ready'
+      ?`Every word right both ways in ${fmtMs(r.ms)}${V.sq.length&&sq.r<sq.n?` (${sq.r}/${sq.n} sentences)`:''}${V.slow.length?`; only ${names(V.slow)} ${V.slow.length===1?'was':'were'} a bit slow`:', nothing dragging'}. ${nextDay?`Go learn Day ${nextDay}.`:day==='all'?'Your bank is in good shape — add new words.':'Add new words.'}`
+      :V.level==='almost'
+      ?`${r.right}/${r.n} right — close, but ${V.wrongIds.length?`you missed ${names(V.wrongIds)}`:''}${V.wrongIds.length&&V.slow.length?' and ':''}${V.slow.length?`${names(V.slow)} took you too long`:''}. One more Practice pass on ${miss.length===1?'that word':'those words'}, then retest${day==='all'?'':` Day ${day}`} before moving on.`
+      :`${r.right}/${r.n} right. ${day==='all'?'Your bank':'Day '+day} isn't yours yet${V.wrongIds.length?` — missed: ${names(V.wrongIds)}`:''}${V.slow.length?`${V.wrongIds.length?'; slow':' — slow'}: ${names(V.slow)}`:''}. Drill ${day==='all'?'the weak words':'Day '+day} again before adding new words.`;
+  const bar=(label,o)=>`<div class="mrow"><div class="n">${label}</div><div class="stack"><i class="s" style="width:${o.n?o.r/o.n*100:0}%"></i><i class="w" style="width:${o.n?(o.n-o.r)/o.n*100:0}%"></i></div><div class="c">${o.r}/${o.n}</div></div>`;
+  // per-word table: wrong first, then slow, then the rest; each direction with its time
+  const byWord={}; r.qs.filter(q=>q.id).forEach(q=>{ (byWord[q.id]=byWord[q.id]||{})[q.type]=q; });
+  const rows=Object.entries(byWord).map(([id,d])=>{ const bad=['en2th','th2en'].filter(t=>d[t]&&!d[t].ok).length, sl=['en2th','th2en'].filter(t=>d[t]&&d[t].ms>r.thr).length; return {id,d,bad,sl,ms:Math.max(d.en2th?d.en2th.ms:0,d.th2en?d.th2en.ms:0)}; })
+    .sort((a,b)=>b.bad-a.bad||b.sl-a.sl||b.ms-a.ms);
+  const cell=q=>q?`<span style="color:${q.ok?'var(--jade)':'var(--clay)'}">${q.ok?'✓':'✗'}</span> <span class="${q.ms>r.thr?'slow':''}" style="${q.ms>r.thr?'color:var(--clay)':''}">${fmtSec(q.ms)}${q.ms>r.thr?' 🐢':''}</span>`:'—';
+  let html=`<div class="card pop"><div class="verdict ${v.cls}" style="margin-top:0"><h3>${v.icon} ${v.title}${day==='all'?'':` · Day ${day}`}</h3>
+      <div class="summary" style="padding:4px 0"><div class="big">${r.right}/${r.n}</div><p><b style="color:var(--cream)">${pct}%</b> · ${fmtMs(r.ms)} · ${fmtSec(r.ms/r.n)} per answer${pv?`<br>vs last time (${fmtDate(pv.date)}): ${deltaHtml(dS,'%',true)} score · ${deltaHtml(dT,'t',false)} time`:''}</p></div>
+      <div class="note" style="font-size:13.5px;color:var(--cream);line-height:1.55;margin-top:6px">${why}</div></div>
+    <div class="row">${miss.length?`<button class="btn miss" id="xpractice">Practise the ${miss.length} shaky word${miss.length===1?'':'s'} →</button>`:''}<button class="btn ${miss.length?'ghost':'gold'}" id="xdone">Done</button></div></div>
+    <div class="panel"><h2>By direction</h2>${bar('EN → Thai',V.th)}${bar('Thai → EN',V.en)}${sq.n?bar('Sentences',sq):''}<div class="legend"><span><i style="background:var(--jade)"></i>right</span><span><i style="background:var(--clay)"></i>wrong</span></div></div>
+    <div class="panel"><h2>Every word · time per direction</h2>
+      <div class="qrow" style="border-top:0;color:var(--muted);font-size:11.5px"><div class="p">word</div><div class="t" style="width:84px;text-align:left">EN → Thai</div><div class="t" style="width:84px;text-align:left">Thai → EN</div></div>
+      ${rows.map(x=>{ const w=BY_ID[x.id]; return `<div class="qrow" data-say="${esc(w.th)}" style="cursor:pointer"><div class="p"><span class="thai" style="font-size:17px">${esc(w.th)}</span> ${esc(w.rom)} <small>· ${esc(w.en.split('/')[0].replace(/\(.*\)/,'').trim())}</small></div><div class="t" style="width:84px;text-align:left">${cell(x.d.en2th)}</div><div class="t" style="width:84px;text-align:left">${cell(x.d.th2en)}</div></div>`; }).join('')}
+      <div class="note" style="font-size:11.5px;color:var(--muted);margin-top:8px">Your median answer took ${fmtSec(r.med)}; anything over ${fmtSec(r.thr)} is marked 🐢 slow — that word isn't automatic yet, even if you got it right. Tap a row to hear it.</div></div>
+    <div class="panel"><h2>Wrong answers · ${wrong.length}</h2>${wrong.length?`<div class="list">`+wrong.map(q=>{ const w=q.id?BY_ID[q.id]:null;
+        return `<div class="item" data-say="${esc(w?w.th:(q.ids||[]).map(id=>BY_ID[id].th).join(''))}"><div class="en"><span class="badge b-learn" style="margin-right:6px">${TEST_TYPES[q.type]}</span>${esc(qPrompt(q))}<small>you: “${esc(q.typed||'—')}”</small><small style="color:#bfe8d4">✓ ${qCorrect(q)}</small></div><div class="rom" style="color:var(--muted);font-size:12px">${fmtSec(q.ms)}</div></div>`; }).join('')+`</div>`:`<div class="empty" style="padding:14px">Nothing wrong 🎉</div>`}</div>`;
   stage().innerHTML=html;
-  document.querySelectorAll('.item[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say));
-  const xp=$('xpractice'); if(xp) xp.onclick=()=>{ P.testIds=miss; P.filter="Test"; if(P.userSub==='shadow') P.userSub='type'; P.sub=P.userSub; resetQ(); setMode('practice'); toast(`Practising the ${miss.length} words you missed`); };
+  document.querySelectorAll('[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say));
+  const xp=$('xpractice'); if(xp) xp.onclick=()=>{ P.testIds=miss; P.filter="Test"; if(P.userSub==='shadow') P.userSub='type'; P.sub=P.userSub; resetQ(); setMode('practice'); toast(`Practising the ${miss.length} shaky word${miss.length===1?'':'s'}`); };
   $('xdone').onclick=()=>{ X.stage='setup'; renderTest(); };
 }
 
@@ -1649,7 +1673,7 @@ const FOOT={
   learn:"Flip cards by tapping, swipe for next. Use the search to look up any word.",
   build:"Sentences are generated fresh from your word bank — endless variety, always translated. EN → Thai: Tiles = put the Thai words in order, Type it = write the whole sentence yourself. Thai → EN: read the Thai and give the English (tiles or typed; wording is forgiven). Patterns = learn the frame, swap the slot. Thai word order is mostly Subject–Verb–Object; question particles (ไหม) go at the end.",
   tones:"Thai has 5 tones — the same syllable with a different tone is a different word. Words you miss come up more often; “Missed” drills only those.",
-  test:"A graded check, not a drill: no hints, no show-answer, no auto-play, one shot per question, stricter matching. Use it about once a week to measure; practise daily in between.",
+  test:"Readiness check: every word of a day, typed both ways, plus a few sentences — no hints, no audio, one shot, timed. Ends with a verdict: ready, almost, or not ready to add new words. Words that took you noticeably longer are flagged 🐢.",
   progress:"Progress is saved in this browser only. Export it to move to another device."
 };
 function setMode(m){
