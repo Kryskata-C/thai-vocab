@@ -352,8 +352,8 @@ const WORDS = [
   {id:"bpaet",th:"แปด",rom:"bpàet (paet)",en:"eight",alt:["8"],tone:"low",day:9,cat:"Numbers"},
   {id:"gao",th:"เก้า",rom:"gâo",en:"nine",alt:["9"],tone:"falling",day:9,cat:"Numbers"},
   {id:"sip",th:"สิบ",rom:"sìp",en:"ten",alt:["10"],tone:"low",day:9,cat:"Numbers"},
-  {id:"phuut",th:"พูด",rom:"phûut",en:"speak / talk",alt:["talk","speak"],tone:"falling",day:9,cat:"Verbs",g:{pos:"v",en:"speak",obj:[],asp:"any",with:1,maak:1}},
-  {id:"bawk",th:"บอก",rom:"bàwk",en:"say / tell",alt:["tell","say"],tone:"low",day:9,cat:"Verbs",g:{pos:"v",en:"say",t:"tell",obj:["person"],asp:"any",nowh:1}},
+  {id:"phuut",th:"พูด",rom:"phûut",en:"say / speak",alt:["speak","talk","say"],tone:"falling",day:9,cat:"Verbs",g:{pos:"v",en:"speak",t:"say",obj:["dem"],asp:"any",with:1,maak:1}},
+  {id:"bawk",th:"บอก",rom:"bàwk",en:"tell (someone)",alt:["tell","say"],tone:"low",day:9,cat:"Verbs",g:{pos:"v",en:"tell",obj:["person"],asp:"any",nowh:1,needObj:1}}, // needObj: bàwk always takes a person — never bare
   {id:"dai_get",th:"ได้",rom:"dâi",en:"get / receive",alt:["receive","obtain","got","get","can","able"],tone:"falling",day:9,cat:"Verbs",g:{pos:"get",obj:["food","drink","thing"]}}, // same word as dâi = can (Day 4): BEFORE a noun = get / receive, AFTER a verb = can
 ];
 const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
@@ -964,8 +964,9 @@ function objFor(v,sb){ // an object that verb v can take: {ids,en}
 function vpOf(v,sb,opt={}){
   const g=G(v), ids=[v.id], rest=[]; let head=g.en, obj=null;
   const asp=g.asp==='any'?(chance(.5)?'prog':'simple'):g.asp;
-  if(opt.wh==='arai'||opt.wh==='khrai'){ if(!g.obj.length || (opt.wh==='khrai'&&!g.obj.includes('person'))) return null; ids.push(opt.wh); head=g.t||g.en; }
-  else if(!opt.noObj && g.obj.length && hc(.8)){ obj=objFor(v,sb); if(obj){ ids.push(...obj.ids); head=g.t||g.en; rest.push(obj.en); } }
+  if(opt.wh==='arai'||opt.wh==='khrai'){ if(!g.obj.length || (opt.wh==='arai'&&!g.obj.some(c=>c!=='person')) || (opt.wh==='khrai'&&!g.obj.includes('person'))) return null; ids.push(opt.wh); head=g.t||g.en; }
+  else if(opt.noObj && g.needObj) return null;                                            // this verb can't appear bare
+  else if(!opt.noObj && g.obj.length && (g.needObj||hc(.8))){ obj=objFor(v,sb); if(!obj && g.needObj) return null; if(obj){ ids.push(...obj.ids); head=g.t||g.en; rest.push(obj.en); } }
   if(!obj && !ids.includes('arai') && !ids.includes('khrai') && g.it){ head=g.t||g.en; rest.push('it'); }
   if(g.dest){ if(opt.wh==='thiinai') ids.push('thiinai'); else if(!opt.noDest && (opt.needDest||hc(.6))){ const d=pk(DESTS(g.dest)); if(d){ ids.push(d.id); rest.push(G(d).to||G(d).en); } else if(opt.needDest) return null; } }
   else if(opt.wh==='thiinai'){ if(!g.at) return null; ids.push('thiinai'); }
