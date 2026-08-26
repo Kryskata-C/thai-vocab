@@ -431,7 +431,7 @@ const DEFAULT_SETTINGS={rate:0.8,autoplay:true,goal:20,distractor:true,hard:fals
 const DIRS=["th","en"];
 const DIR_LABEL={th:"EN → Thai",en:"Thai → EN"};
 const blank=()=>({right:0,wrong:0,seen:0,streak:0,due:0,last:0});
-let S={v:3,stats:{},activity:{},sent:{},pat:{},tone:{},notes:{},review:null,tests:[],settings:{...DEFAULT_SETTINGS}}; // tests: graded Test-tab history
+let S={v:3,stats:{},activity:{},sent:{},pat:{},tone:{},notes:{},review:null,tests:[],focus:{},settings:{...DEFAULT_SETTINGS}}; // tests: graded Test-tab history // focus: per-day list of word ids to surface more often in the Today tab
 function migrate(j){ // v2 stats were flat (one record per word, from EN → Thai drills) → move them under .th
   const out={}; Object.entries(j.stats||{}).forEach(([id,x])=>{ out[id]=("seen" in x)?{th:{...blank(),...x},en:blank()}:x; }); j.stats=out; j.v=3; return j;
 }
@@ -580,7 +580,7 @@ function checkEnStrict(w,input){
 //  APP STATE
 // =====================================================================
 let mode="practice";
-let P={sub:"type",userSub:"type",filter:"All",testIds:[],scope:null,day:null,dayOpen:false,cur:null,phase:"ask",verdict:null,hint:0,session:{n:0,right:0},done:false,tq:null,noteEdit:false,heard:null,heardOk:false,listening:false,toneMiss:false};
+let P={sub:"type",userSub:"type",filter:"All",testIds:[],scope:null,day:null,dayOpen:false,focusOpen:false,cur:null,phase:"ask",verdict:null,hint:0,session:{n:0,right:0},done:false,tq:null,noteEdit:false,heard:null,heardOk:false,listening:false,toneMiss:false};
 let L={view:"cards",day:"All",q:"",idx:0,flipped:false};
 let B={view:"tiles",cur:null,recent:[],recentFrames:[],picked:[],phase:"ask",tiles:[],right:0,n:0,marks:null,typed:"",hint:0,pat:null,fill:null,pv:null,pn:0,pright:0,patOpen:false};
 let T={cur:null,phase:"ask",pick:null,right:0,n:0,filter:"all",last:null};
@@ -618,12 +618,14 @@ function practicePool(){
   if(P.filter==="All") return WORDS;
   return WORDS.filter(w=>w.cat===P.filter);
 }
+const focusIds=()=>(S.focus||{})[TODAY_DAY()]||[];
 function priority(w,dir){
   const s=stD(w.id,dir); let p=Math.random()*2;
   if(s.seen===0) p+=4;                          // new words come early
   if(s.seen>0 && (s.due||0)<=Date.now()) p+=6;  // due for review
   p+=s.wrong*2 - s.streak;                      // weak words rise, solid words sink
   if(s.last && Date.now()-s.last<60e3) p-=8;    // avoid immediate repeats
+  if(mode==="today" && P.day!=="review" && focusIds().includes(w.id)) p+=5; // 🎯 focused words surface more; others stay in the mix
   return p;
 }
 function pickNext(){ const p=practicePool(); if(!p.length) return null; const d=curDir(); return p.slice().sort((a,b)=>priority(b,d)-priority(a,d))[0]; }
@@ -736,10 +738,14 @@ function todayHeader(R){
       <div class="list">${R.queue.map((q,i)=>{ const w=BY_ID[q.id]; if(!w) return ''; return `<div class="item" data-say="${esc(w.th)}" style="${i<R.i?'opacity:.45':''}"><div class="thai">${esc(w.th)}</div><div class="en">${esc(w.en)}<small>${DIR_LABEL[q.dir]} · day ${w.day}${i<R.i?' · done':''}</small></div><div class="rom">${esc(w.rom)}</div>${badge(w)}</div>`; }).join('')}</div>
       <div class="row" style="margin:0 0 10px"><button class="link" id="rebuild">↻ Rebuild queue</button></div></details>`;
   }
-  const ws=WORDS.filter(w=>w.day===d), solid=ws.filter(w=>known(w.id)).length;
+  const ws=WORDS.filter(w=>w.day===d), solid=ws.filter(w=>known(w.id)).length, foc=focusIds();
   return chips+`<details class="dayref" id="dayref" ${P.dayOpen?'open':''}><summary><span>📅 Day ${d} · ${ws.length} words · ${solid} solid</span></summary>
     <div class="list">${ws.map(w=>`<div class="item" data-say="${esc(w.th)}"><div class="thai">${esc(w.th)}</div><div class="en">${esc(w.en)}<small>${esc(w.tone)} · ${esc(w.cat)}${noteOf(w.id)?` · 📝 ${esc(noteOf(w.id))}`:''}</small></div><div class="rom">${esc(w.rom)}</div>${badge(w)}<button aria-label="listen">🔊</button></div>`).join('')}</div>
-    <div class="row" style="margin:0 0 10px"><button class="link" id="daycards">🃏 Flashcards for Day ${d} →</button></div></details>`;
+    <div class="row" style="margin:0 0 10px"><button class="link" id="daycards">🃏 Flashcards for Day ${d} →</button></div></details>
+  <details class="dayref" id="focusref" ${P.focusOpen?'open':''}><summary><span>🎯 Focus${foc.length?` · ${foc.length} word${foc.length===1?'':'s'} boosted`:' the tricky ones'}</span></summary>
+    <p style="font-size:12.5px;color:var(--muted);line-height:1.5;padding:2px 0 8px">Tap the words giving you trouble — they'll come up more often. The rest of Day ${d} stays in the mix.</p>
+    <div class="chips" id="focuschips" style="flex-wrap:wrap;padding-bottom:10px">${ws.map(w=>`<button class="chip clay ${foc.includes(w.id)?'active':''}" data-fw="${w.id}">${esc(w.rom)} <span style="opacity:.7">· ${esc(w.en.split('/')[0].trim())}</span></button>`).join('')}</div>
+    ${foc.length?`<div class="row" style="margin:0 0 10px"><button class="link" id="focusclear">✕ Clear focus</button></div>`:''}</details>`;
 }
 // ---- shadow (speak) mode: listen → say it → reveal; optional speech recognition check
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition||null;
@@ -790,6 +796,10 @@ function resetQ(){ P.cur=null; P.phase="ask"; P.hint=0; P.tq=null; P.noteEdit=fa
 function bindPractice(){
   const dch=$('daychips'); if(dch) dch.onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; P.day=b.dataset.day==="review"?"review":+b.dataset.day; renderPractice(); };
   const dr=$('dayref'); if(dr){ dr.ontoggle=()=>{ P.dayOpen=dr.open; }; dr.querySelectorAll('.item[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say)); }
+  const fr=$('focusref'); if(fr) fr.ontoggle=()=>{ P.focusOpen=fr.open; };
+  const fc=$('focuschips'); if(fc) fc.onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; const d=TODAY_DAY(), id=b.dataset.fw; S.focus=S.focus||{}; const arr=S.focus[d]||[];
+    S.focus[d]=arr.includes(id)?arr.filter(x=>x!==id):[...arr,id]; save(); renderPractice(); };
+  const fcl=$('focusclear'); if(fcl) fcl.onclick=()=>{ const d=TODAY_DAY(); if(S.focus) delete S.focus[d]; save(); renderPractice(); toast('Focus cleared'); };
   const dc=$('daycards')||$('daycards2'); if(dc) dc.onclick=()=>{ L.day=P.day==="review"?NEWEST_DAY():TODAY_DAY(); L.view="cards"; L.idx=0; L.flipped=false; setMode("learn"); };
   const rb=$('rebuild'); if(rb) rb.onclick=()=>{ S.review=null; ensureReview(); resetQ(); renderPractice(); toast('Queue rebuilt'); };
   const seg=$('subseg'); if(seg) seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{ P.userSub=P.sub=b.dataset.sub; resetQ(); renderPractice(); });
@@ -1672,7 +1682,7 @@ function renderProgress(){
   $('export').onclick=()=>{ const io=$('io'); io.style.display='block'; io.value=JSON.stringify(S); io.select(); try{ navigator.clipboard.writeText(io.value); toast('Copied to clipboard'); }catch(e){} };
   $('import').onclick=()=>{ const io=$('io'); if(io.style.display==='none'){ io.style.display='block'; io.value=''; io.placeholder='Paste your exported JSON here, then press Import again.'; io.focus(); return; }
     try{ importState(JSON.parse(io.value)); toast('Progress imported'); renderProgress(); }catch(e){ toast('That is not valid export data'); } };
-  $('reset').onclick=()=>{ if(!confirm('Reset all progress on this device? This cannot be undone.')) return; S={v:3,stats:{},activity:{},sent:{},pat:{},tone:{},notes:{},review:null,tests:[],settings:S.settings}; save(); P={...P,cur:null,phase:"ask",session:{n:0,right:0}}; B={...B,cur:null,right:0,n:0,pn:0,pright:0}; T={...T,cur:null,right:0,n:0}; toast('Progress reset'); renderProgress(); };
+  $('reset').onclick=()=>{ if(!confirm('Reset all progress on this device? This cannot be undone.')) return; S={v:3,stats:{},activity:{},sent:{},pat:{},tone:{},notes:{},review:null,tests:[],focus:{},settings:S.settings}; save(); P={...P,cur:null,phase:"ask",session:{n:0,right:0}}; B={...B,cur:null,right:0,n:0,pn:0,pright:0}; T={...T,cur:null,right:0,n:0}; toast('Progress reset'); renderProgress(); };
   renderStat();
 }
 
@@ -1707,7 +1717,7 @@ async function checkImportLink(){
 //  ROUTER
 // ---------------------------------------------------------------------
 const FOOT={
-  today:"Daily review = due words from earlier days + today's words, both directions, one pass. Or pick a single day to drill.",
+  today:"Daily review = due words from earlier days + today's words, both directions, one pass. Or pick a single day to drill — open 🎯 Focus to boost the words giving you trouble.",
   practice:"Type the answer, then Check. Romanised spelling is matched leniently (khao / kao / khâao all count). Each direction is tracked separately — a word is solid only when you own it both ways.",
   learn:"Flip cards by tapping, swipe for next. Use the search to look up any word.",
   build:"Sentences are generated fresh from your word bank — endless variety, always translated. EN → Thai: Tiles = put the Thai words in order, Type it = write the whole sentence yourself. Thai → EN: read the Thai and give the English (tiles or typed; wording is forgiven). Patterns = learn the frame, swap the slot. Thai word order is mostly Subject–Verb–Object; question particles (ไหม) go at the end.",
