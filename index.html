@@ -375,6 +375,7 @@ const WORDS = [
   {id:"reo",th:"เร็ว",rom:"reo",en:"fast",alt:["quick","quickly","hurry"],tone:"mid",day:11,cat:"Describe",g:{pos:"adj",en:"fast",of:["thing"]}}, // opposite of cháa; reo reo! = hurry up!
   {id:"roi",th:"ร้อย",rom:"rói",en:"hundred",alt:["100","one hundred"],tone:"high",day:11,cat:"Numbers"},
   {id:"len",th:"เล่น",rom:"lên",en:"play",alt:["play around","have fun"],tone:"falling",day:11,cat:"Verbs",g:{pos:"v",en:"play",obj:[],asp:"any",with:1,maak:1}},
+  {id:"tam",th:"ทำ",rom:"tam",en:"do / make",alt:["make","do","cook"],tone:"mid",day:11,cat:"Verbs",g:{pos:"v",en:"do",t:"make",whEn:"do",obj:["food"],asp:"any",it:1}}, // tam aa-hǎan = cook; khun tam à-rai? = what are you doing?
 ];
 const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
 
@@ -415,7 +416,7 @@ const PATTERNS = [
   {id:"here",name:"[X] yùu thîi-nîi",gloss:"[X] is here",ids:["_","yuu","thiinii"],
    fills:[{id:"rot",en:"The car is here."},{id:"khao_he",en:"He is here."},{id:"aahaan",en:"The food is here."},{id:"hongnaam",en:"The bathroom is here."}]},
   {id:"arai",name:"khun [verb] à-rai?",gloss:"What do you [verb]?  — à-rai sits at the END, in the object slot",ids:["khun","_","arai"],
-   fills:[{id:"ao",en:"What do you want?"},{id:"gin",en:"What are you eating?"},{id:"deum",en:"What are you drinking?"},{id:"chorp",en:"What do you like?"},{id:"duu",en:"What are you looking at?"},{id:"mii",en:"What do you have?"}]},
+   fills:[{id:"ao",en:"What do you want?"},{id:"gin",en:"What are you eating?"},{id:"deum",en:"What are you drinking?"},{id:"chorp",en:"What do you like?"},{id:"duu",en:"What are you looking at?"},{id:"mii",en:"What do you have?"},{id:"tam",en:"What are you doing?"}]},
   {id:"khrai",name:"[X] khrai?",gloss:"Who is [X]?  — khrai replaces the person slot (end for 'is who', front for 'who does')",ids:["_","khrai"],
    fills:[{id:"nii",en:"Who is this?"},{id:"nan",en:"Who is that?"},{id:"khao_he",en:"Who is he?"}]},
   {id:"meuarai",name:"khun [verb] mʉ̂a-rài?",gloss:"When do you [verb]?  — mʉ̂a-rài goes at the END",ids:["khun","_","meuarai"],
@@ -948,7 +949,7 @@ const DESTS=dir=>[...POS('loc').filter(l=>dir==='away'?!G(l).prox:dir==='toward'
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 function enS3(v){ const [h,...r]=v.split(' '); let f; if(h==='have') f='has'; else if(h==='do') f='does'; else if(/(s|sh|ch|x|z|o)$/.test(h)) f=h+'es'; else if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ies'; else f=h+'s'; return [f,...r].join(' '); }
 function enIng(v){ const [h,...r]=v.split(' '); let f; if(/ie$/.test(h)) f=h.slice(0,-2)+'ying'; else if(/[^e]e$/.test(h)) f=h.slice(0,-1)+'ing'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ing'; else f=h+'ing'; return [f,...r].join(' '); }
-function enPP(v){ const [h,...r]=v.split(' '); const IR={eat:'eaten',drink:'drunk',go:'gone',come:'come',see:'seen',know:'known',have:'had',take:'taken',get:'got',buy:'bought',say:'said',speak:'spoken',tell:'told',look:'looked'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); }
+function enPP(v){ const [h,...r]=v.split(' '); const IR={eat:'eaten',drink:'drunk',go:'gone',come:'come',see:'seen',know:'known',have:'had',take:'taken',get:'got',buy:'bought',say:'said',speak:'spoken',tell:'told',look:'looked',make:'made',do:'done'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); }
 function enCmp(a){ const IR={good:'better',hot:'hotter',big:'bigger'}; if(IR[a]) return IR[a]; if(/[^aeiou]y$/.test(a)) return a.slice(0,-1)+'ier';
   if(a.length<=5&&!/ /.test(a)) return (/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(a)?a+a.slice(-1):a)+(/e$/.test(a)?'r':'er'); return 'more '+a; } // cheap→cheaper, big→bigger, spicy→spicier, expensive→more expensive
 const CONTR={I:"I'm",you:"you're",he:"he's",she:"she's",we:"we're",they:"they're",it:"it's"};
@@ -1004,7 +1005,7 @@ function objFor(v,sb){ // an object that verb v can take: {ids,en}
 function vpOf(v,sb,opt={}){
   const g=G(v), ids=[v.id], rest=[]; let head=g.en, obj=null;
   const asp=g.asp==='any'?(chance(.5)?'prog':'simple'):g.asp;
-  if(opt.wh==='arai'||opt.wh==='khrai'){ if(!g.obj.length || (opt.wh==='arai'&&!g.obj.some(c=>c!=='person')) || (opt.wh==='khrai'&&!g.obj.includes('person'))) return null; ids.push(opt.wh); head=g.t||g.en; }
+  if(opt.wh==='arai'||opt.wh==='khrai'){ if(!g.obj.length || (opt.wh==='arai'&&!g.obj.some(c=>c!=='person')) || (opt.wh==='khrai'&&!g.obj.includes('person'))) return null; ids.push(opt.wh); head=(opt.wh==='arai'&&g.whEn)||g.t||g.en; } // whEn: tam à-rai = what are you DOING (not making)
   else if(opt.noObj && g.needObj) return null;                                            // this verb can't appear bare
   else if(!opt.noObj && g.obj.length && (g.needObj||hc(.8))){ obj=objFor(v,sb); if(!obj && g.needObj) return null; if(obj){ ids.push(...obj.ids); head=g.t||g.en; rest.push(obj.en); } }
   if(!obj && !ids.includes('arai') && !ids.includes('khrai') && g.it){ head=g.t||g.en; rest.push('it'); }
@@ -1096,7 +1097,7 @@ const FRAMES=[
     return {ids:[v.id,'chaa','chaa'],en:cap(`${en} slowly!`),req:true,tip:TIP.dbl}; }},
   {id:'stop',w:1.5,gen(){ if(!has('yut')) return null; const r=Math.random();
     if(r<.4&&has('thiinii')) return {ids:['yut','thiinii'],en:'Stop here!',req:true,tip:TIP.yut};
-    const v=pk(DYN().filter(x=>!G(x).dest&&!G(x).nowh)); if(!v) return null;
+    const v=pk(DYN().filter(x=>!G(x).dest&&!G(x).nowh&&x.id!=='tam')); if(!v) return null; // bare "Stop doing!" reads broken — tam needs its object
     if(r<.75) return {ids:['yut',v.id],en:cap(`stop ${enIng(G(v).en)}!`),req:true,tip:TIP.yut};
     if(!has('khun')||!has('dai')||!has('mai_q')) return null;
     return {ids:['khun','yut',v.id,'dai','mai_q'],en:cap(`can you stop ${enIng(G(v).en)}?`),tip:TIP.yut}; }},
@@ -1204,7 +1205,7 @@ const FRAMES=[
       ['khothoot','khrap','Sorry! / Excuse me!'],['rorn','maak','khrap',"It's so hot!"],['wannii','rorn','maak',"It's really hot today."],['phaeng','maak','khrap','So expensive!'],['thuuk','maak','khrap','Very cheap!'],['wannii','yen',"It's cool today."],['dai','khrap','Yes, I can.'],['mai_not','dai','khrap',"No, I can't."],['aroi','maak','khrap','Very delicious!'],['ao','khrap','Yes, please — I want it.'],['dii','maak','khrap','Very good!'],
       ['khun','sabaaidii','mai_q','How are you?'],['sabaaidii','khrap',"I'm fine."],['mai_not','khaojai','khrap',"I don't understand."],['khaojai','laew','khrap','I understand now.'],['khaojai','mai_q','Do you understand?'],
       ['phet','nitnoi','khrap','A little spicy, please.'],['khun','yuunai','Where are you?'],['phom','hiu','maak',"I'm so hungry!"],['hiu','mai_q','Are you hungry?'],['kho','annii','khrap','May I have this one, please.'],
-      ['reo','reo','Hurry up!'],['khun','phuut','reo','maak',"You speak so fast!"],['sip','gwaa','More than ten.'],['neung','roi','One hundred.'],['bpai','baan','laew',"I already went home."]];
+      ['reo','reo','Hurry up!'],['khun','phuut','reo','maak',"You speak so fast!"],['sip','gwaa','More than ten.'],['neung','roi','One hundred.'],['bpai','baan','laew',"I already went home."],['khun','tam','arai','What are you doing?']];
     const p=pk(P.filter(x=>x.slice(0,-1).every(has))); return p?{ids:p.slice(0,-1),en:p[p.length-1],polite:false}:null; }},
 ];
 const sentKey=s=>s.key||s.ids.join('|');
@@ -1297,7 +1298,7 @@ function matchSentence(ids,input,strict){
 const EN_PHRASES=[[/\bi'?d like\b/g,'i want'],[/\bwould like\b/g,'want'],[/\b(?:can|could|may) i (?:have|get)\b/g,'may i have'],[/\bgive me\b/g,'may i have'],[/\bexcuse me\b/g,'sorry'],
   [/\b(said|says|say|know|knows|knew|think|thinks|thought|told|tells|tell)\s+that\b/g,'$1'],[/\ba little bit\b/g,'abit'],[/\ba little\b/g,'abit'],[/\ba bit\b/g,'abit'],[/\bslightly\b/g,'abit'],[/\bpull over\b/g,'stop'],[/\bthank you\b/g,'thanks'],[/\bthanks a lot\b/g,'thanks very'],[/\bthank you very much\b/g,'thanks very'],[/\ba lot\b/g,'very'],[/\bso much\b/g,'very'],[/\breally\b/g,'very'],[/\bso\b/g,'very'],
   [/\bwanna\b/g,'want to'],[/\bgonna\b/g,'going to'],[/\bwant to\b/g,'want'],[/\bwould you like\b/g,'want'],[/\bdo you want\b/g,'want'],[/\bdon'?t want\b/g,'not want'],[/\bno thanks\b/g,'not want'],[/\bthere is\b/g,'have'],[/\bthere are\b/g,'have'],[/\bthere'?s\b/g,'have'],[/\bis there\b/g,'have'],[/\bare there\b/g,'have']];
-const EN_IRR={am:'be',is:'be',are:'be',was:'be',were:'be',has:'have',had:'have',does:'do',did:'do',goes:'go',went:'go',gone:'go',ate:'eat',eaten:'eat',drank:'drink',drunk:'drink',came:'come',saw:'see',seen:'see',knew:'know',known:'know',took:'take',taken:'take',bought:'buy',got:'get',said:'say',told:'tell',spoke:'speak',spoken:'speak',people:'person',men:'man',no:'not',could:'can',may:'can',me:'i',my:'i',him:'he',her:'she',us:'we',them:'they',nope:'not'};
+const EN_IRR={am:'be',is:'be',are:'be',was:'be',were:'be',has:'have',had:'have',does:'do',did:'do',goes:'go',went:'go',gone:'go',ate:'eat',eaten:'eat',drank:'drink',drunk:'drink',came:'come',saw:'see',seen:'see',knew:'know',known:'know',took:'take',taken:'take',bought:'buy',got:'get',said:'say',told:'tell',spoke:'speak',spoken:'speak',made:'make',done:'do',people:'person',men:'man',no:'not',could:'can',may:'can',me:'i',my:'i',him:'he',her:'she',us:'we',them:'they',nope:'not'};
 const EN_STOP=new Set(['a','an','the','to','be','do','it','please','yes','ok','okay','hey','oh','and','of','at','in','on','some','any']);
 function enStem(t){ t=EN_IRR[t]||t; if(t.length>4&&/ing$/.test(t)) t=t.slice(0,-3); else if(t.length>4&&/ed$/.test(t)) t=t.slice(0,-2); else if(t.length>3&&/ies$/.test(t)) t=t.slice(0,-3)+'y';
   else if(t.length>3&&/(s|sh|ch|x|z|o)es$/.test(t)) t=t.slice(0,-2); else if(t.length>3&&/[^s]s$/.test(t)) t=t.slice(0,-1); if(t.length>3&&/e$/.test(t)) t=t.slice(0,-1); return t; }
