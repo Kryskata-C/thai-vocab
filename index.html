@@ -366,12 +366,12 @@ const WORDS = [
   {id:"hiu",th:"หิว",rom:"hǐu",en:"hungry",alt:["starving"],tone:"rising",day:10,cat:"Describe",g:{pos:"adj",en:"hungry",of:["person"]}},
   {id:"annii",th:"อันนี้",rom:"an-níi",en:"this one",alt:["this"],tone:"mid+high",day:10,cat:"Glue",g:{pos:"dem",en:"this one",an:1}}, // an = classifier for objects — what you point at when ordering
   {id:"annan",th:"อันนั้น",rom:"an-nán",en:"that one",alt:["that"],tone:"mid+high",day:10,cat:"Glue",g:{pos:"dem",en:"that one",an:1}},
-  // Day 11 — stop, comparisons, home, the connectors dtɔɔn (when) and wâa (that), fast, hundred, play
+  // Day 11 — stop, comparisons, home, the connector dtɔɔn (when), ordering, fast, hundred, play, do/make
   {id:"yut",th:"หยุด",rom:"yùt",en:"stop (action)",alt:["stop","halt","quit","day off"],tone:"low",day:11,cat:"Verbs",g:{pos:"stop"}}, // person/action → yùt; vehicle → jòrt. Other job: wan yùt = day off / holiday
   {id:"gwaa",th:"กว่า",rom:"gwàa",en:"than / more (-er)",alt:["than","more","more than"],tone:"low",day:11,cat:"Glue",g:{pos:"cmp"}}, // adj + gwàa = comparative; sìp gwàa = ten-something
   {id:"baan",th:"บ้าน",rom:"bâan",en:"home / house",alt:["house","home"],tone:"falling",day:11,cat:"Places",g:{pos:"n",cls:["place"],a:"a house",the:"the house",at:"at home",to:"home",bare:1,holds:["person"]}}, // bpai bâan / yùu bâan — no thîi needed
   {id:"dtoon",th:"ตอน",rom:"dtɔɔn (dtorn)",en:"when (connector)",alt:["when","while"],tone:"mid",day:11,cat:"Glue"}, // joins clauses (front of its own); mʉ̂a-rài ASKS when, dtɔɔn connects. dtɔɔn-cháo = morning
-  {id:"waa",th:"ว่า",rom:"wâa",en:"that (connector)",alt:["that","say that","know that"],tone:"falling",day:11,cat:"Glue"}, // rúu wâa… / bàwk wâa… — reported speech; it's the wâa inside phrɔ́-wâa
+  {id:"sang",th:"สั่ง",rom:"sàng",en:"order (food)",alt:["order","to order","ordered"],tone:"low",day:11,cat:"Verbs",g:{pos:"v",en:"order",obj:["food","drink","dem"],asp:"any"}}, // phǒm sàng khâao — restaurant verb; sàng láew = already ordered
   {id:"reo",th:"เร็ว",rom:"reo",en:"fast",alt:["quick","quickly","hurry"],tone:"mid",day:11,cat:"Describe",g:{pos:"adj",en:"fast",of:["thing"]}}, // opposite of cháa; reo reo! = hurry up!
   {id:"roi",th:"ร้อย",rom:"rói",en:"hundred",alt:["100","one hundred"],tone:"high",day:11,cat:"Numbers"},
   {id:"len",th:"เล่น",rom:"lên",en:"play",alt:["play around","have fun"],tone:"falling",day:11,cat:"Verbs",g:{pos:"v",en:"play",obj:[],asp:"any",with:1,maak:1}},
@@ -879,15 +879,18 @@ function renderLearn(){
     <input class="search" id="q" type="search" placeholder="Search English, romanised or Thai…" value="${esc(L.q)}">`;
   if(!p.length){ html+=`<div class="empty">Nothing matches.</div>`; stage().innerHTML=html; bindLearn(); return; }
   if(L.view==="cards"){
-    if(L.idx>=p.length) L.idx=0; const w=p[L.idx];
+    if(L.shuf) ensureShufDeck(p); else if(L.idx>=p.length) L.idx=0;
+    const w=L.shuf?BY_ID[L.order[L.pos]]:p[L.idx];
+    const cnt=`${(L.shuf?L.pos:L.idx)+1}/${p.length}`;
     html+=`<div class="flash ${L.flipped?'flipped':''}" id="flash"><div class="inner">
-        <div class="face"><span class="tag">${esc(w.cat)} · day ${w.day}</span><span class="cnt">${L.idx+1}/${p.length}</span>
+        <div class="face"><span class="tag">${esc(w.cat)} · day ${w.day}</span><span class="cnt">${L.shuf?'🔀 ':''}${cnt}</span>
           <div class="prompt">${esc(w.en)}</div><div class="sub">tap to flip</div></div>
-        <div class="face back"><span class="tag">${esc(w.tone)} tone</span><span class="cnt">${L.idx+1}/${p.length}</span>
+        <div class="face back"><span class="tag">${esc(w.tone)} tone</span><span class="cnt">${L.shuf?'🔀 ':''}${cnt}</span>
           <div class="thai">${esc(w.th)}</div><div class="rom">${esc(w.rom)}</div><div class="sub">${esc(w.en)}${noteOf(w.id)?`<br>📝 ${esc(noteOf(w.id))}`:''}</div></div>
       </div></div>
       <div class="row"><button class="btn ghost" id="prev">‹ Prev</button><button class="listen" id="lsay">🔊</button><button class="btn ghost" id="nxt">Next ›</button></div>
-      <div class="row"><button class="btn gold" id="shuf">Shuffle</button></div>`;
+      <div class="row"><button class="btn gold" id="shuf">${L.shuf?'↻ Reshuffle':'🔀 Shuffle'}</button>${L.shuf?'<button class="btn ghost" id="unshuf">In order</button>':''}</div>
+      ${L.shuf?`<div class="note" style="text-align:center;margin-top:6px;color:var(--muted);font-size:12.5px">Shuffled round: each card comes up once before any repeats</div>`:''}`;
   } else {
     html+=`<div class="list">`+p.map(w=>`
       <div class="item" data-say="${esc(w.th)}">
@@ -904,16 +907,29 @@ function bindLearn(){
   const q=$('q'); q.oninput=()=>{ L.q=q.value; L.idx=0; const pos=q.selectionStart; renderLearn(); const nq=$('q'); nq.focus(); nq.setSelectionRange(pos,pos); };
   const p=learnPool();
   const fl=$('flash'); if(fl){
-    fl.onclick=()=>{ L.flipped=!L.flipped; fl.classList.toggle('flipped',L.flipped); if(L.flipped&&S.settings.autoplay) speak(p[L.idx].th); };
-    $('prev').onclick=()=>{ L.idx=(L.idx-1+p.length)%p.length; L.flipped=false; renderLearn(); };
-    $('nxt').onclick=()=>{ L.idx=(L.idx+1)%p.length; L.flipped=false; renderLearn(); };
-    $('lsay').onclick=()=>speak(p[L.idx].th);
-    $('shuf').onclick=()=>{ L.idx=Math.floor(Math.random()*p.length); L.flipped=false; renderLearn(); };
+    const cur=()=>L.shuf?BY_ID[L.order[L.pos]]:p[L.idx];
+    const step=d=>{ // shuffled: walk the dealt order; finishing a round reshuffles so every card shows once per round
+      if(L.shuf){ const n=L.order.length;
+        if(d>0&&L.pos>=n-1){ const last=L.order[n-1]; L.order=shuffle(L.order.slice()); if(n>1&&L.order[0]===last) L.order.push(L.order.shift()); L.pos=0; toast(`All ${n} seen — reshuffled 🔀`); }
+        else L.pos=(L.pos+d+n)%n; }
+      else L.idx=(L.idx+d+p.length)%p.length;
+      L.flipped=false; renderLearn(); };
+    fl.onclick=()=>{ L.flipped=!L.flipped; fl.classList.toggle('flipped',L.flipped); if(L.flipped&&S.settings.autoplay) speak(cur().th); };
+    $('prev').onclick=()=>step(-1);
+    $('nxt').onclick=()=>step(1);
+    $('lsay').onclick=()=>speak(cur().th);
+    $('shuf').onclick=()=>{ const first=L.shuf?cur().id:null; L.shuf=true; L.order=shuffle(p.map(w=>w.id)); if(first&&L.order.length>1&&L.order[0]===first) L.order.push(L.order.shift()); L.orderKey=p.map(w=>w.id).sort().join('|'); L.pos=0; L.flipped=false; renderLearn(); if(!first) toast('Shuffled — every card once per round'); };
+    const us=$('unshuf'); if(us) us.onclick=()=>{ const id=cur().id; L.shuf=false; L.idx=Math.max(0,p.findIndex(w=>w.id===id)); L.flipped=false; renderLearn(); };
     // swipe
     let sx=0; fl.ontouchstart=e=>sx=e.touches[0].clientX;
-    fl.ontouchend=e=>{ const dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>50){ L.idx=(L.idx+(dx<0?1:-1)+p.length)%p.length; L.flipped=false; renderLearn(); } };
+    fl.ontouchend=e=>{ const dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>50) step(dx<0?1:-1); };
   }
   document.querySelectorAll('.item[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say));
+}
+function ensureShufDeck(p){ // keep the shuffled deck in sync with the visible pool (day chip / search changes rebuild it)
+  const key=p.map(w=>w.id).sort().join('|');
+  if(!L.order||L.orderKey!==key){ L.order=shuffle(p.map(w=>w.id)); L.orderKey=key; L.pos=0; }
+  if(L.pos>=L.order.length) L.pos=0;
 }
 
 // ---------------------------------------------------------------------
@@ -1039,7 +1055,6 @@ const TIP={mai_q:"mǎi turns a statement into a yes/no question — it always go
   yut:"yùt = stop a person / an action (yùt phûut!) — jòrt = stop/park a vehicle. Other job: wan yùt = day off",
   gwaa:"adjective + gwàa = -er / more…: thùuk gwàa = cheaper. With numbers: sìp gwàa = ten-something, more than ten",
   dtoon:"dtɔɔn = the 'when' that CONNECTS two clauses (front of its own, like phrɔ́-wâa) — mʉ̂a-rài is the QUESTION when?",
-  waa:"wâa = 'that' — glues know / say to a clause: rúu wâa…, bàwk wâa… (it's the wâa inside phrɔ́-wâa)",
   roi:"rói = hundred — stack digits: sǎwng rói hâa sìp = 250. (Careful: 20 is yîi-sìp, an irregular you'll meet later)"};
 // ---- Grammar lessons that gate frames. A frame with `lesson:"x"` only fires once LESSONS.x.day is set (and that day exists in the bank).
 //      day:null = upcoming — the pattern is known to the generator but not taught yet, so it never appears in drills.
@@ -1111,12 +1126,6 @@ const FRAMES=[
     if(has('gin')&&has('phuut')&&has('mai_not')) opts.push({ids:['dtoon',sb.id,'gin',sb.id,'mai_not','phuut'],en:`when ${sb.s} ${n3?'eats':'eat'}, ${sb.s} ${n3?"doesn't":"don't"} talk.`});
     if(has('yuu')&&has('baan')&&has('len')) opts.push({ids:['dtoon',sb.id,'yuu','baan',sb.id,'len'],en:`when ${sb.s} ${n3?'is':sb.be} home, ${sb.s} ${n3?'plays':'play'}.`});
     const o=pk(opts); return o?{ids:o.ids,en:cap(o.en),tip:TIP.dtoon}:null; }},
-  {id:'waa',w:2.5,gen(){ if(!has('waa')) return null; const vb=pk(['ruu','bawk'].filter(has)); if(!vb) return null;
-    const a=pk(POS('adj')); if(!a) return null; const g=G(a); if(!g.of.some(c=>c!=='person')) return null;
-    const isubs=[...POS('dem'),...POS('n').filter(n=>!G(n).noPrice&&G(n).cls.some(c=>g.of.includes(c)&&c!=='person'))];
-    const iw=pk(isubs); if(!iw) return null; const isb=subjOf(iw), very=has('maak')&&chance(.3);
-    const sb=subjOf(pk(TELLERS())); if(!sb) return null; const head=vb==='ruu'?(sb.n===3?'knows':'know'):'said';
-    return {ids:[sb.id,vb,'waa',iw.id,a.id,...(very?['maak']:[])],en:cap(`${sb.s} ${head} that ${isb.s} ${isb.be} ${very?'very ':''}${g.en}.`),tip:TIP.waa}; }},
   {id:'hundred',w:1.5,gen(){ if(!has('roi')) return null; const D=[['neung','one'],['sawng','two'],['saam','three'],['sii','four'],['haa','five'],['hok','six'],['jet','seven'],['bpaet','eight'],['gao','nine']].filter(x=>has(x[0])); if(!D.length) return null;
     const h=pk(D); let ids=[h[0],'roi'], en=`${h[1]} hundred`;
     if(chance(.45)&&has('sip')){ const TENS={three:'thirty',four:'forty',five:'fifty',six:'sixty',seven:'seventy',eight:'eighty',nine:'ninety'};
@@ -1205,7 +1214,7 @@ const FRAMES=[
       ['khothoot','khrap','Sorry! / Excuse me!'],['rorn','maak','khrap',"It's so hot!"],['wannii','rorn','maak',"It's really hot today."],['phaeng','maak','khrap','So expensive!'],['thuuk','maak','khrap','Very cheap!'],['wannii','yen',"It's cool today."],['dai','khrap','Yes, I can.'],['mai_not','dai','khrap',"No, I can't."],['aroi','maak','khrap','Very delicious!'],['ao','khrap','Yes, please — I want it.'],['dii','maak','khrap','Very good!'],
       ['khun','sabaaidii','mai_q','How are you?'],['sabaaidii','khrap',"I'm fine."],['mai_not','khaojai','khrap',"I don't understand."],['khaojai','laew','khrap','I understand now.'],['khaojai','mai_q','Do you understand?'],
       ['phet','nitnoi','khrap','A little spicy, please.'],['khun','yuunai','Where are you?'],['phom','hiu','maak',"I'm so hungry!"],['hiu','mai_q','Are you hungry?'],['kho','annii','khrap','May I have this one, please.'],
-      ['reo','reo','Hurry up!'],['khun','phuut','reo','maak',"You speak so fast!"],['sip','gwaa','More than ten.'],['neung','roi','One hundred.'],['bpai','baan','laew',"I already went home."],['khun','tam','arai','What are you doing?']];
+      ['reo','reo','Hurry up!'],['khun','phuut','reo','maak',"You speak so fast!"],['sip','gwaa','More than ten.'],['neung','roi','One hundred.'],['bpai','baan','laew',"I already went home."],['khun','tam','arai','What are you doing?'],['sang','laew','khrap','Already ordered.'],['khun','sang','arai','What are you ordering?']];
     const p=pk(P.filter(x=>x.slice(0,-1).every(has))); return p?{ids:p.slice(0,-1),en:p[p.length-1],polite:false}:null; }},
 ];
 const sentKey=s=>s.key||s.ids.join('|');
