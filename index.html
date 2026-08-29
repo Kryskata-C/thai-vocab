@@ -879,15 +879,18 @@ function renderLearn(){
     <input class="search" id="q" type="search" placeholder="Search English, romanised or Thai…" value="${esc(L.q)}">`;
   if(!p.length){ html+=`<div class="empty">Nothing matches.</div>`; stage().innerHTML=html; bindLearn(); return; }
   if(L.view==="cards"){
-    if(L.idx>=p.length) L.idx=0; const w=p[L.idx];
+    if(L.shuf) ensureShufDeck(p); else if(L.idx>=p.length) L.idx=0;
+    const w=L.shuf?BY_ID[L.order[L.pos]]:p[L.idx];
+    const cnt=`${(L.shuf?L.pos:L.idx)+1}/${p.length}`;
     html+=`<div class="flash ${L.flipped?'flipped':''}" id="flash"><div class="inner">
-        <div class="face"><span class="tag">${esc(w.cat)} · day ${w.day}</span><span class="cnt">${L.idx+1}/${p.length}</span>
+        <div class="face"><span class="tag">${esc(w.cat)} · day ${w.day}</span><span class="cnt">${L.shuf?'🔀 ':''}${cnt}</span>
           <div class="prompt">${esc(w.en)}</div><div class="sub">tap to flip</div></div>
-        <div class="face back"><span class="tag">${esc(w.tone)} tone</span><span class="cnt">${L.idx+1}/${p.length}</span>
+        <div class="face back"><span class="tag">${esc(w.tone)} tone</span><span class="cnt">${L.shuf?'🔀 ':''}${cnt}</span>
           <div class="thai">${esc(w.th)}</div><div class="rom">${esc(w.rom)}</div><div class="sub">${esc(w.en)}${noteOf(w.id)?`<br>📝 ${esc(noteOf(w.id))}`:''}</div></div>
       </div></div>
       <div class="row"><button class="btn ghost" id="prev">‹ Prev</button><button class="listen" id="lsay">🔊</button><button class="btn ghost" id="nxt">Next ›</button></div>
-      <div class="row"><button class="btn gold" id="shuf">Shuffle</button></div>`;
+      <div class="row"><button class="btn gold" id="shuf">${L.shuf?'↻ Reshuffle':'🔀 Shuffle'}</button>${L.shuf?'<button class="btn ghost" id="unshuf">In order</button>':''}</div>
+      ${L.shuf?`<div class="note" style="text-align:center;margin-top:6px;color:var(--muted);font-size:12.5px">Shuffled round: each card comes up once before any repeats</div>`:''}`;
   } else {
     html+=`<div class="list">`+p.map(w=>`
       <div class="item" data-say="${esc(w.th)}">
@@ -904,16 +907,29 @@ function bindLearn(){
   const q=$('q'); q.oninput=()=>{ L.q=q.value; L.idx=0; const pos=q.selectionStart; renderLearn(); const nq=$('q'); nq.focus(); nq.setSelectionRange(pos,pos); };
   const p=learnPool();
   const fl=$('flash'); if(fl){
-    fl.onclick=()=>{ L.flipped=!L.flipped; fl.classList.toggle('flipped',L.flipped); if(L.flipped&&S.settings.autoplay) speak(p[L.idx].th); };
-    $('prev').onclick=()=>{ L.idx=(L.idx-1+p.length)%p.length; L.flipped=false; renderLearn(); };
-    $('nxt').onclick=()=>{ L.idx=(L.idx+1)%p.length; L.flipped=false; renderLearn(); };
-    $('lsay').onclick=()=>speak(p[L.idx].th);
-    $('shuf').onclick=()=>{ L.idx=Math.floor(Math.random()*p.length); L.flipped=false; renderLearn(); };
+    const cur=()=>L.shuf?BY_ID[L.order[L.pos]]:p[L.idx];
+    const step=d=>{ // shuffled: walk the dealt order; finishing a round reshuffles so every card shows once per round
+      if(L.shuf){ const n=L.order.length;
+        if(d>0&&L.pos>=n-1){ const last=L.order[n-1]; L.order=shuffle(L.order.slice()); if(n>1&&L.order[0]===last) L.order.push(L.order.shift()); L.pos=0; toast(`All ${n} seen — reshuffled 🔀`); }
+        else L.pos=(L.pos+d+n)%n; }
+      else L.idx=(L.idx+d+p.length)%p.length;
+      L.flipped=false; renderLearn(); };
+    fl.onclick=()=>{ L.flipped=!L.flipped; fl.classList.toggle('flipped',L.flipped); if(L.flipped&&S.settings.autoplay) speak(cur().th); };
+    $('prev').onclick=()=>step(-1);
+    $('nxt').onclick=()=>step(1);
+    $('lsay').onclick=()=>speak(cur().th);
+    $('shuf').onclick=()=>{ const first=L.shuf?cur().id:null; L.shuf=true; L.order=shuffle(p.map(w=>w.id)); if(first&&L.order.length>1&&L.order[0]===first) L.order.push(L.order.shift()); L.orderKey=p.map(w=>w.id).sort().join('|'); L.pos=0; L.flipped=false; renderLearn(); if(!first) toast('Shuffled — every card once per round'); };
+    const us=$('unshuf'); if(us) us.onclick=()=>{ const id=cur().id; L.shuf=false; L.idx=Math.max(0,p.findIndex(w=>w.id===id)); L.flipped=false; renderLearn(); };
     // swipe
     let sx=0; fl.ontouchstart=e=>sx=e.touches[0].clientX;
-    fl.ontouchend=e=>{ const dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>50){ L.idx=(L.idx+(dx<0?1:-1)+p.length)%p.length; L.flipped=false; renderLearn(); } };
+    fl.ontouchend=e=>{ const dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>50) step(dx<0?1:-1); };
   }
   document.querySelectorAll('.item[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say));
+}
+function ensureShufDeck(p){ // keep the shuffled deck in sync with the visible pool (day chip / search changes rebuild it)
+  const key=p.map(w=>w.id).sort().join('|');
+  if(!L.order||L.orderKey!==key){ L.order=shuffle(p.map(w=>w.id)); L.orderKey=key; L.pos=0; }
+  if(L.pos>=L.order.length) L.pos=0;
 }
 
 // ---------------------------------------------------------------------
