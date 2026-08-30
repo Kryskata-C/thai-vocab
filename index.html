@@ -377,15 +377,15 @@ const WORDS = [
   {id:"len",th:"เล่น",rom:"lên",en:"play",alt:["play around","have fun"],tone:"falling",day:11,cat:"Verbs",g:{pos:"v",en:"play",obj:[],asp:"any",with:1,maak:1}},
   {id:"tam",th:"ทำ",rom:"tam",en:"do / make",alt:["make","do","cook"],tone:"mid",day:11,cat:"Verbs",g:{pos:"v",en:"do",t:"make",whEn:"do",obj:["food"],asp:"any",it:1}}, // tam aa-hǎan = cook; khun tam à-rai? = what are you doing?
   // Day 12 — must, they, walk, give/for/let, but, think, quiet, really, and thùuk's second job: correct
-  {id:"dtong",th:"ต้อง",rom:"dtɔ̂ng (dtong)",en:"must / have to",alt:["must","have to","need to","has to"],tone:"falling",day:12,cat:"Verbs",g:{pos:"aux"}}, // before the verb; mâi dtɔ̂ng = no need to (NOT mustn't)
-  {id:"phuakkhao",th:"พวกเขา",rom:"phûak-khǎo",en:"they / them",alt:["they","them"],tone:"falling+rising",day:12,cat:"People",g:{pos:"pron",s:"they",o:"them",be:"are",n:2}}, // phûak (group) + khǎo; phûak-rao = we as a group
+  {id:"dtong",th:"ต้อง",rom:"dtɔ̂ng (dtong)",en:"must",alt:["have to","must","need to","has to"],tone:"falling",day:12,cat:"Verbs",g:{pos:"aux"}}, // before the verb; mâi dtɔ̂ng = no need to (NOT mustn't)
+  {id:"phuakkhao",th:"พวกเขา",rom:"phûak-khǎo",en:"they",alt:["them","they"],tone:"falling+rising",day:12,cat:"People",g:{pos:"pron",s:"they",o:"them",be:"are",n:2}}, // phûak (group) + khǎo; phûak-rao = we as a group
   {id:"dern",th:"เดิน",rom:"dern",en:"walk",alt:["walking","stroll"],tone:"mid",day:12,cat:"Verbs",g:{pos:"v",en:"walk",obj:[],asp:"any",with:1}}, // chains with bpai: dern bpai ráan; dern lên = stroll
-  {id:"hai",th:"ให้",rom:"hâi",en:"give / for / let",alt:["give","for","let","allow","give me"],tone:"falling",day:12,cat:"Verbs",g:{pos:"give"}}, // hâi phǒm = give me; tam hâi phǒm = do it for me; hâi khǎo bpai = let him go
+  {id:"hai",th:"ให้",rom:"hâi",en:"give",alt:["for","let","allow","give me"],tone:"falling",day:12,cat:"Verbs",g:{pos:"give"}}, // hâi phǒm = give me; tam hâi phǒm = do it for me; hâi khǎo bpai = let him go
   {id:"dtae",th:"แต่",rom:"dtɛ̀ɛ (dtae)",en:"but",alt:["however"],tone:"low",day:12,cat:"Glue"}, // joins clauses: phaeng dtɛ̀ɛ à-ròi = expensive but delicious
   {id:"khit",th:"คิด",rom:"khít",en:"think",alt:["thinking","thought"],tone:"high",day:12,cat:"Verbs",g:{pos:"v",en:"think",obj:[],asp:"any",maak:1,nowh:1,perf:0}}, // khít mâak = overthink; khít wâa… = I think that… (needs wâa)
   {id:"ngiap",th:"เงียบ",rom:"ngîap",en:"quiet",alt:["silent","calm"],tone:"falling",day:12,cat:"Describe",g:{pos:"adj",en:"quiet",of:["place"]}}, // ngîap ngîap! = shh; ráan ngîap = a quiet shop
-  {id:"jing",th:"จริง",rom:"jing",en:"real / true",alt:["real","true","really","truly"],tone:"mid",day:12,cat:"Glue",g:{pos:"part"}}, // jing mǎi? = really?; doubled jing-jing = really/truly
-  {id:"thuuk_right",th:"ถูก",rom:"thùuk",en:"correct / right",alt:["correct","right","thats right","exactly","cheap","inexpensive"],tone:"low",day:12,cat:"Describe",g:{pos:"part"}}, // same word as thùuk = cheap (Day 8) — second job: correct. thùuk láew = that's right
+  {id:"jing",th:"จริง",rom:"jing",en:"true",alt:["real","really","truly"],tone:"mid",day:12,cat:"Glue",g:{pos:"part"}}, // jing mǎi? = really?; doubled jing-jing = really/truly
+  {id:"thuuk_right",th:"ถูก",rom:"thùuk",en:"correct",alt:["right","thats right","exactly","cheap","inexpensive"],tone:"low",day:12,cat:"Describe",g:{pos:"part"}}, // same word as thùuk = cheap (Day 8) — second job: correct. thùuk láew = that's right
 ];
 const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
 
