@@ -376,6 +376,16 @@ const WORDS = [
   {id:"roi",th:"ร้อย",rom:"rói",en:"hundred",alt:["100","one hundred"],tone:"high",day:11,cat:"Numbers"},
   {id:"len",th:"เล่น",rom:"lên",en:"play",alt:["play around","have fun"],tone:"falling",day:11,cat:"Verbs",g:{pos:"v",en:"play",obj:[],asp:"any",with:1,maak:1}},
   {id:"tam",th:"ทำ",rom:"tam",en:"do / make",alt:["make","do","cook"],tone:"mid",day:11,cat:"Verbs",g:{pos:"v",en:"do",t:"make",whEn:"do",obj:["food"],asp:"any",it:1}}, // tam aa-hǎan = cook; khun tam à-rai? = what are you doing?
+  // Day 12 — must, they, walk, give/for/let, but, think, quiet, really, that's right
+  {id:"dtong",th:"ต้อง",rom:"dtɔ̂ng (dtong)",en:"must / have to",alt:["must","have to","need to","has to"],tone:"falling",day:12,cat:"Verbs",g:{pos:"aux"}}, // before the verb; mâi dtɔ̂ng = no need to (NOT mustn't)
+  {id:"phuakkhao",th:"พวกเขา",rom:"phûak-khǎo",en:"they / them",alt:["they","them"],tone:"falling+rising",day:12,cat:"People",g:{pos:"pron",s:"they",o:"them",be:"are",n:2}}, // phûak (group) + khǎo; phûak-rao = we as a group
+  {id:"dern",th:"เดิน",rom:"dern",en:"walk",alt:["walking","stroll"],tone:"mid",day:12,cat:"Verbs",g:{pos:"v",en:"walk",obj:[],asp:"any",with:1}}, // chains with bpai: dern bpai ráan; dern lên = stroll
+  {id:"hai",th:"ให้",rom:"hâi",en:"give / for / let",alt:["give","for","let","allow","give me"],tone:"falling",day:12,cat:"Verbs",g:{pos:"give"}}, // hâi phǒm = give me; tam hâi phǒm = do it for me; hâi khǎo bpai = let him go
+  {id:"dtae",th:"แต่",rom:"dtɛ̀ɛ (dtae)",en:"but",alt:["however"],tone:"low",day:12,cat:"Glue"}, // joins clauses: phaeng dtɛ̀ɛ à-ròi = expensive but delicious
+  {id:"khit",th:"คิด",rom:"khít",en:"think",alt:["thinking","thought"],tone:"high",day:12,cat:"Verbs",g:{pos:"v",en:"think",obj:[],asp:"any",maak:1,nowh:1,perf:0}}, // khít mâak = overthink; khít wâa… = I think that… (needs wâa)
+  {id:"ngiap",th:"เงียบ",rom:"ngîap",en:"quiet",alt:["silent","calm"],tone:"falling",day:12,cat:"Describe",g:{pos:"adj",en:"quiet",of:["place"]}}, // ngîap ngîap! = shh; ráan ngîap = a quiet shop
+  {id:"jing",th:"จริง",rom:"jing",en:"real / true",alt:["real","true","really","truly"],tone:"mid",day:12,cat:"Glue",g:{pos:"part"}}, // jing mǎi? = really?; doubled jing-jing = really/truly
+  {id:"thuuklaew",th:"ถูกแล้ว",rom:"thùuk láew",en:"that's right",alt:["thats right","correct","right","exactly"],tone:"low+high",day:12,cat:"Polite"}, // thùuk (correct) + láew — same shape: dii láew = that's fine
 ];
 const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
 
@@ -409,6 +419,8 @@ const PATTERNS = [
    fills:[{id:"thuuk",en:"Cheaper."},{id:"yai",en:"Bigger."},{id:"dii",en:"Better."},{id:"phaeng",en:"More expensive."},{id:"reo",en:"Faster."}]},
   {id:"yut",name:"yùt [verb]",gloss:"stop [verb]-ing  — yùt stops people and actions (jòrt parks vehicles)",ids:["yut","_"],
    fills:[{id:"phuut",en:"Stop talking."},{id:"gin",en:"Stop eating."},{id:"duu",en:"Stop looking."},{id:"len",en:"Stop playing."}]},
+  {id:"dtong",name:"phǒm dtɔ̂ng [verb]",gloss:"I have to [verb]  — dtɔ̂ng sits before the verb; mâi dtɔ̂ng = no need to",ids:["phom","dtong","_"],
+   fills:[{id:"bpai",en:"I have to go."},{id:"gin",en:"I have to eat."},{id:"phuut",en:"I have to speak."},{id:"tam",en:"I have to do it."}]},
   {id:"nii",name:"nîi [X]",gloss:"This is [X]  — no word for 'is' with adjectives",ids:["nii","_"],
    fills:[{id:"aroi",en:"This is delicious."},{id:"phet",en:"This is spicy."},{id:"suay",en:"This is beautiful."},{id:"khao_rice",en:"This is rice."},{id:"naam",en:"This is water."}]},
   {id:"chorp",name:"phǒm chôrp [X]",gloss:"I like [X]",ids:["phom","chorp","_"],
@@ -1055,7 +1067,12 @@ const TIP={mai_q:"mǎi turns a statement into a yes/no question — it always go
   yut:"yùt = stop a person / an action (yùt phûut!) — jòrt = stop/park a vehicle. Other job: wan yùt = day off",
   gwaa:"adjective + gwàa = -er / more…: thùuk gwàa = cheaper. With numbers: sìp gwàa = ten-something, more than ten",
   dtoon:"dtɔɔn = the 'when' that CONNECTS two clauses (front of its own, like phrɔ́-wâa) — mʉ̂a-rài is the QUESTION when?",
-  roi:"rói = hundred — stack digits: sǎwng rói hâa sìp = 250. (Careful: 20 is yîi-sìp, an irregular you'll meet later)"};
+  roi:"rói = hundred — stack digits: sǎwng rói hâa sìp = 250. (Careful: 20 is yîi-sìp, an irregular you'll meet later)",
+  dtong:"dtɔ̂ng + verb = must / have to — mâi dtɔ̂ng = 'no need to', NOT 'must not'; mâi dtɔ̂ng khráp politely declines",
+  dern:"dern = walk — chain it with bpai: dern bpai ráan = walk to the shop; dern lên = go for a stroll (walk-play)",
+  hai:"hâi = give / for / let: hâi phǒm = give me · tam hâi phǒm = do it for me · hâi khǎo bpai = let him go",
+  dtae:"dtɛ̀ɛ = but — joins two statements and the repeated subject drops: phaeng dtɛ̀ɛ à-ròi = expensive but delicious",
+  jing:"jing-jing (doubled) = really / truly; jing mǎi? = really? — you'll say this constantly"};
 // ---- Grammar lessons that gate frames. A frame with `lesson:"x"` only fires once LESSONS.x.day is set (and that day exists in the bank).
 //      day:null = upcoming — the pattern is known to the generator but not taught yet, so it never appears in drills.
 const LESSONS={
@@ -1126,6 +1143,33 @@ const FRAMES=[
     if(has('gin')&&has('phuut')&&has('mai_not')) opts.push({ids:['dtoon',sb.id,'gin',sb.id,'mai_not','phuut'],en:`when ${sb.s} ${n3?'eats':'eat'}, ${sb.s} ${n3?"doesn't":"don't"} talk.`});
     if(has('yuu')&&has('baan')&&has('len')) opts.push({ids:['dtoon',sb.id,'yuu','baan',sb.id,'len'],en:`when ${sb.s} ${n3?'is':sb.be} home, ${sb.s} ${n3?'plays':'play'}.`});
     const o=pk(opts); return o?{ids:o.ids,en:cap(o.en),tip:TIP.dtoon}:null; }},
+  {id:'must',w:3,gen(){ if(!has('dtong')) return null; const v=pk(compVerbs()); if(!v) return null; const r=Math.random(), sb=subjOf(pk(r<.6?PRONS():OTHERS())); if(!sb) return null;
+    const vp=vpOf(v,sb,{noAdj:chance(.5)}); if(!vp) return null; const M={head:'have',asp:'simple',rest:('to '+vp.head+(vp.rest?' '+vp.rest:'')).trim(),dyn:true};
+    if(r<.35) return clause(sb,M,{mood:'stmt'},[sb.id,'dtong',...vp.ids],{tip:TIP.dtong});
+    if(r<.6) return clause(sb,M,{mood:'stmt',neg:true},[sb.id,'mai_not','dtong',...vp.ids],{tip:"mâi dtɔ̂ng = no need to — Thai's polite 'don't bother', never 'must not'"});
+    if(r<.85) return clause(sb,M,{mood:'yn'},[sb.id,'dtong',...vp.ids,'mai_q'],{tip:TIP.dtong});
+    if(!has('tammai')) return null; return clause(sb,M,{mood:'wh',wh:'Why',noTime:true},['tammai',sb.id,'dtong',...vp.ids],{tip:TIP.tammai}); }},
+  {id:'walk',w:1.5,gen(){ if(!has('dern')) return null; const sb=subjOf(pk(PRONS())); if(!sb) return null; const r=Math.random();
+    if(r<.3&&has('len')) return clause(sb,{head:'take',asp:'prog',rest:'a stroll',dyn:true},{mood:'stmt'},[sb.id,'dern','len'],{tip:TIP.dern});
+    if(!has('bpai')) return null; const d=pk(DESTS('away')); if(!d) return null; const to=G(d).to||G(d).en, W={head:'walk',asp:'prog',rest:to,dyn:true};
+    if(r<.7) return clause(sb,W,{mood:'stmt'},[sb.id,'dern','bpai',d.id],{tip:TIP.dern});
+    return clause(sb,W,{mood:'yn'},[sb.id,'dern','bpai',d.id,'mai_q'],{tip:TIP.dern}); }},
+  {id:'give',w:2,gen(){ if(!has('hai')) return null; const p=pk(PRONS().filter(x=>x.id!=='khun')); if(!p) return null; const o=subjOf(p).o, r=Math.random();
+    if(r<.3) return {ids:['hai',p.id],en:`Give it to ${o}!`,req:true,tip:TIP.hai};
+    if(r<.65){ const v=pk(['tam','sang'].filter(has)); if(!v) return null; return {ids:[v,'hai',p.id],en:`${v==='tam'?'Do':'Order'} it for ${o}!`,req:true,tip:TIP.hai}; }
+    if(!has('bpai')) return null; return {ids:['hai',p.id,'bpai'],en:cap(`let ${o} go!`),tip:TIP.hai}; }},
+  {id:'but',w:2.5,gen(){ if(!has('dtae')) return null; const T=[], add=(ids,en)=>{ if(ids.every(has)) T.push({ids,en}); };
+    add(['aahaan','phaeng','dtae','aroi','maak'],"The food is expensive but so delicious.");
+    add(['raan','lek','dtae','dii'],"The shop is small but good.");
+    add(['rot','chaa','dtae','thuuk'],"The car is slow but cheap.");
+    add(['annii','thuuk','dtae','dii','maak'],"This one is cheap but very good.");
+    add(['thiinii','suay','dtae','rorn','maak'],"It's beautiful here but very hot.");
+    add(['raan','yai','dtae','ngiap'],"The shop is big but quiet.");
+    const sb=subjOf(pk(TELLERS())); if(sb){ const n3=sb.n===3;
+      add([sb.id,'chorp','dtae','phaeng','maak'],`${cap(sb.s)} ${n3?'likes':'like'} it but it's very expensive.`);
+      add([sb.id,'yaak','bpai','dtae','mai_not','mii','ngern'],`${cap(sb.s)} ${n3?'wants':'want'} to go but ${n3?(sb.s==='she'?'she':'he')+" doesn't":sb.s+" don't"} have money.`);
+      add([sb.id,'hiu','dtae','mai_not','yaak','gin'],`${cap(contr(sb))} hungry but ${sb.s} ${n3?"doesn't":"don't"} want to eat.`); }
+    const o=pk(T); return o?{ids:o.ids,en:o.en,tip:TIP.dtae}:null; }},
   {id:'hundred',w:1.5,gen(){ if(!has('roi')) return null; const D=[['neung','one'],['sawng','two'],['saam','three'],['sii','four'],['haa','five'],['hok','six'],['jet','seven'],['bpaet','eight'],['gao','nine']].filter(x=>has(x[0])); if(!D.length) return null;
     const h=pk(D); let ids=[h[0],'roi'], en=`${h[1]} hundred`;
     if(chance(.45)&&has('sip')){ const TENS={three:'thirty',four:'forty',five:'fifty',six:'sixty',seven:'seventy',eight:'eighty',nine:'ninety'};
@@ -1135,11 +1179,11 @@ const FRAMES=[
   {id:'adj',w:4,gen(){ const a=pk(POS('adj')); if(!a) return null; const g=G(a);
     const subs=[...(g.of.some(c=>c!=='person')?POS('dem'):[]),...POS('n').filter(n=>!G(n).noPrice&&G(n).cls.some(c=>g.of.includes(c))),...(g.of.includes('person')?PRONS().filter(p=>G(p).n!==1):[])];
     const w=pk(subs); if(!w) return null; let sb=subjOf(w), sj=[w.id]; const dem=G(w).pos==='dem', r=Math.random();
-    const deg=chance(.4)?(has('nitnoi')&&chance(.35)?'nitnoi':has('maak')?'maak':null):null; // very [adj] / a little [adj]
+    const deg=chance(.4)?(has('nitnoi')&&chance(.3)?'nitnoi':has('jing')&&chance(.3)?'jing':has('maak')?'maak':null):null; // very / a little / really-really [adj]
     if(G(w).pos==='n'&&chance(.35)){ const d=pk(POS('dem').filter(x=>!G(x).an)); if(d){ sj=[w.id,d.id]; sb={...sb,s:`${G(d).en} ${G(w).the.replace(/^the /,'')}`}; } } // rót nîi = this car (noun first, then nîi/nân)
     const chg=!dem&&G(w).pos==='n'&&G(w).cls.some(c=>c==='food'||c==='drink'); // only food/drink quality changes day to day
-    const V={be:1,rest:(deg==='maak'?'very ':deg==='nitnoi'?'a little ':'')+g.en,dyn:chg};
-    if(r<.55) return clause(sb,V,{mood:'stmt'},[...sj,a.id,...(deg?[deg]:[])],{tip:sj.length>1?"nîi/nân AFTER a noun = this/that [noun]; before, it's a subject on its own":deg==='nitnoi'?TIP.nitnoi:TIP.adj});
+    const V={be:1,rest:(deg==='maak'?'very ':deg==='nitnoi'?'a little ':deg==='jing'?'really ':'')+g.en,dyn:chg};
+    if(r<.55) return clause(sb,V,{mood:'stmt'},[...sj,a.id,...(deg?(deg==='jing'?['jing','jing']:[deg]):[])],{tip:sj.length>1?"nîi/nân AFTER a noun = this/that [noun]; before, it's a subject on its own":deg==='nitnoi'?TIP.nitnoi:deg==='jing'?TIP.jing:TIP.adj});
     if(r<.75) return clause(sb,{be:1,rest:g.en,dyn:chg},{mood:'stmt',neg:true},[...sj,'mai_not',a.id],{tip:TIP.mai_not});
     if(G(w).pos==='pron') return null; return clause(sb,{be:1,rest:g.en,dyn:chg},{mood:'yn'},[...sj,a.id,'mai_q'],{tip:TIP.mai_q}); }},
   {id:'dem_n',w:1.5,gen(){ const d=pk(POS('dem')), n=pk(POS('n').filter(x=>!G(x).cls.includes('place')&&!G(x).cls.includes('person'))); if(!d||!n) return null; return {ids:[d.id,n.id],en:`${cap(G(d).en)} is ${G(n).a}.`,tip:"No 'is' needed: nîi + noun = this is …"}; }},
@@ -1181,7 +1225,7 @@ const FRAMES=[
     if(r<.18 && has('khrai')){ const w=pk([...PRONS().filter(p=>!['I','we'].includes(G(p).s)),...POS('dem').filter(x=>!G(x).an)]); if(!w) return null; const sb=subjOf(w);
       return {ids:[w.id,cop.id,'khrai'],en:enClause(sb,{be:1,rest:''},{mood:'wh',wh:'Who'}),tip:TIP.bpen}; }
     if(khon && r<.62){ const a=pk(POS('adj').filter(x=>G(x).of.includes('person'))); if(!a) return null;
-      const pr=pk(PRONS().filter(p=>G(p).s!=='we')); if(!pr) return null; const sb=subjOf(pr), rest=`a ${G(a).en} person`;
+      const pr=pk(PRONS().filter(p=>!['we','they'].includes(G(p).s))); if(!pr) return null; const sb=subjOf(pr), rest=`a ${G(a).en} person`; // plural subjects break "a … person"
       if(sb.n!==1&&chance(.3)) return clause(sb,{be:1,rest,dyn:false},{mood:'yn'},[pr.id,cop.id,khon.id,a.id,'mai_q'],{tip:TIP.bpen});
       return clause(sb,{be:1,rest,dyn:false},{mood:'stmt'},[pr.id,cop.id,khon.id,a.id],{tip:TIP.bpen}); }
     const d=pk(POS('dem')), n=pk(POS('n').filter(x=>!G(x).cls.includes('person'))); if(!d||!n) return null;
@@ -1214,7 +1258,9 @@ const FRAMES=[
       ['khothoot','khrap','Sorry! / Excuse me!'],['rorn','maak','khrap',"It's so hot!"],['wannii','rorn','maak',"It's really hot today."],['phaeng','maak','khrap','So expensive!'],['thuuk','maak','khrap','Very cheap!'],['wannii','yen',"It's cool today."],['dai','khrap','Yes, I can.'],['mai_not','dai','khrap',"No, I can't."],['aroi','maak','khrap','Very delicious!'],['ao','khrap','Yes, please — I want it.'],['dii','maak','khrap','Very good!'],
       ['khun','sabaaidii','mai_q','How are you?'],['sabaaidii','khrap',"I'm fine."],['mai_not','khaojai','khrap',"I don't understand."],['khaojai','laew','khrap','I understand now.'],['khaojai','mai_q','Do you understand?'],
       ['phet','nitnoi','khrap','A little spicy, please.'],['khun','yuunai','Where are you?'],['phom','hiu','maak',"I'm so hungry!"],['hiu','mai_q','Are you hungry?'],['kho','annii','khrap','May I have this one, please.'],
-      ['reo','reo','Hurry up!'],['khun','phuut','reo','maak',"You speak so fast!"],['sip','gwaa','More than ten.'],['neung','roi','One hundred.'],['bpai','baan','laew',"I already went home."],['khun','tam','arai','What are you doing?'],['sang','laew','khrap','Already ordered.'],['khun','sang','arai','What are you ordering?']];
+      ['reo','reo','Hurry up!'],['khun','phuut','reo','maak',"You speak so fast!"],['sip','gwaa','More than ten.'],['neung','roi','One hundred.'],['bpai','baan','laew',"I already went home."],['khun','tam','arai','What are you doing?'],['sang','laew','khrap','Already ordered.'],['khun','sang','arai','What are you ordering?'],
+      ['mai_not','dtong','khrap','No need, thank you.'],['jing','mai_q','Really?'],['khothoot','jing','jing',"I'm really sorry."],['ngiap','ngiap','Shh — quiet down!'],
+      ['thuuk','laew',"That's right."],['dii','laew',"That's fine."],['yut','khit','maak','Stop thinking so much!']];
     const p=pk(P.filter(x=>x.slice(0,-1).every(has))); return p?{ids:p.slice(0,-1),en:p[p.length-1],polite:false}:null; }},
 ];
 const sentKey=s=>s.key||s.ids.join('|');
@@ -1234,7 +1280,7 @@ function sentScore(c){
   return p;
 }
 function genSentence(){
-  const rf=B.recentFrames||[], fd=S.settings.focusDay||0; const short_={phrase:.25,dem_n:.25,what_this:.25,kho:.5,drive:.5,who:.6,maak:.5,slow:.5,name:.6,stop:.5,than:.6,hundred:.5};
+  const rf=B.recentFrames||[], fd=S.settings.focusDay||0; const short_={phrase:.25,dem_n:.25,what_this:.25,kho:.5,drive:.5,who:.6,maak:.5,slow:.5,name:.6,stop:.5,than:.6,hundred:.5,walk:.6,give:.5};
   const fr=FRAMES.filter(f=>lessonOn(f.lesson)).map(f=>({f,w:f.w*(rf[0]===f.id?.08:rf.includes(f.id)?.35:1)*(HARDB()?(short_[f.id]||1):1)}));
   let best=null;
   for(let tries=0;tries<(fd?16:8);tries++){ // pick a frame (weighted, avoiding recent ones), then the best of its fills; with a focus day, compare several frames
@@ -1287,12 +1333,15 @@ function matchSentence(ids,input,strict){
     const w=BY_ID[id]; const cands=[...new Set([...romAlts(w),w.rom].map(skeleton).filter(Boolean))].sort((a,b)=>b.length-a.length);
     let hit=null;
     for(let k=0;k<=Math.min(10,rem.length) && !hit;k++){ // allow some junk before the word
-      for(const c of cands){
+      for(const c of cands){ // pass 1: exact hits only — a long fuzzy candidate must never swallow the start of the next word
         const seg=rem.slice(k,k+c.length);
         if(seg===c){ hit={k,len:c.length,q:k?"close":"ok"}; break; }
         // skeleton() collapses doubled letters, also across words ("yàak gin" → "yakin"): the word may share its first letter with the previous one
         if(k===0 && prev===c[0] && rem.slice(0,c.length-1)===c.slice(1)){ hit={k:0,len:c.length-1,q:"ok"}; break; }
-        if(!strict && c.length>=4 && seg.length===c.length && lev(seg,c)<=1){ hit={k,len:c.length,q:"close"}; break; }
+      }
+      if(!hit && !strict) for(const c of cands){ // pass 2: one-letter near-misses
+        const seg=rem.slice(k,k+c.length);
+        if(c.length>=4 && seg.length===c.length && lev(seg,c)<=1){ hit={k,len:c.length,q:"close"}; break; }
       }
     }
     if(hit){ prev=rem[hit.k+hit.len-1]||prev; rem=rem.slice(hit.k+hit.len); marks.push(hit.q); } else { marks.push("bad"); prev=""; }
@@ -1316,7 +1365,7 @@ function enSyn(){ // stem → canonical stem, built from the word bank's glosses
   if(EN_SYN) return EN_SYN; const m={};
   const groups=[['bathroom','toilet','restroom','washroom','wc','loo'],['shop','store','restaurant','market'],['delicious','tasty','yummy'],['big','large','huge'],['small','little','tiny'],['beautiful','pretty','lovely','gorgeous'],
     ['good','fine','nice','well','great'],['expensive','pricey','costly','dear'],['cheap','inexpensive'],['cold','iced','cool','chilly'],['person','people','human','man','woman','guy','someone','somebody'],['car','vehicle','taxi','cab'],
-    ['food','meal','dish'],['money','cash'],['sorry','apologies','apologise','apologize','pardon'],['look','see','watch'],['stop','park','halt'],['very','much','extremely'],['go','get','reach','arrive','receive','obtain','gotten'],['who','whom'],['where','whereabouts'],['like','love','enjoy'],['have','got','own','has']];
+    ['food','meal','dish'],['money','cash'],['sorry','apologies','apologise','apologize','pardon'],['look','see','watch'],['stop','park','halt'],['very','much','extremely'],['go','get','reach','arrive','receive','obtain','gotten'],['who','whom'],['where','whereabouts'],['like','love','enjoy'],['have','got','own','has'],['correct','right','exactly']];
   WORDS.forEach(w=>{ const parts=w.en.replace(/\([^)]*\)/g,'').split('/').map(x=>x.trim().toLowerCase()).filter(Boolean); const singles=[...parts,...(w.alt||[]).map(x=>x.toLowerCase())].filter(x=>/^[a-z']+$/.test(x)); if(singles.length>1) groups.push(singles); });
   groups.forEach(g=>{ const c=enStem(g[0]); g.forEach(x=>{ const k=enStem(x); if(!m[k]) m[k]=c; }); });
   return EN_SYN=m;
