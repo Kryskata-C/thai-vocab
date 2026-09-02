@@ -1028,7 +1028,7 @@ function objFor(v,sb){ // an object that verb v can take: {ids,en}
     if(b) return {ids:[o.ids[0],'gap',b.ids[0]],en:`${o.en} and ${b.en}`};
   }
   if(o.cls && o.ids.length===1 && hc(.14)){ // dress the noun: aahaan phèt = spicy food, rót nân = that car (adjective / nîi-nân AFTER the noun)
-    if(chance(.55)){ const a=pk(POS('adj').filter(x=>G(x).of.some(c=>o.cls.includes(c))));
+    if(chance(.55) && !G(BY_ID[o.ids[0]]).noPrice){ const a=pk(POS('adj').filter(x=>G(x).of.some(c=>o.cls.includes(c))));
       if(a){ let en=o.en.replace(/^((?:the|an?) )?/,(m,art)=>(art||'')+G(a).en+' ').replace(/^a ([aeiou])/,'an $1'); return {ids:[o.ids[0],a.id],en,cls:o.cls}; } }
     const d=pk(POS('dem').filter(x=>!G(x).an)); if(d) return {ids:[o.ids[0],d.id],en:`${G(d).en} ${o.en.replace(/^(?:the|an?) /,'')}`,cls:o.cls};
   }
@@ -1046,7 +1046,8 @@ function vpOf(v,sb,opt={}){
   else if(opt.wh==='thiinai'){ if(!g.at) return null; ids.push('thiinai'); }
   if(opt.wh==='gapkhrai'){ if(!g.with||!has('gap')) return null; ids.push('gap','khrai'); rest.push('with'); }
   if(!opt.wh && !opt.noAdj){
-    const addPlace=()=>{ const p=pk(DESTS().filter(x=>!G(x).holds)); if(p){ // no eating "in the bathroom" — holds-restricted places only work in yùu/destination frames if(G(p).pos==='loc'){ ids.push(p.id); rest.push(G(p).en); } else if(has('thii')){ ids.push('thii',p.id); rest.push(G(p).at); } } };
+    // adjunct place skips holds-restricted spots (no eating "in the bathroom") — those still work as yùu/destinations
+    const addPlace=()=>{ const p=pk(DESTS().filter(x=>!G(x).holds)); if(p){ if(G(p).pos==='loc'){ ids.push(p.id); rest.push(G(p).en); } else if(has('thii')){ ids.push('thii',p.id); rest.push(G(p).at); } } };
     const addWith=()=>{ const c=pk(PRONS().filter(p=>p.id!==sb.id&&!ids.includes(p.id)&&!(fpg(p)&&fpg(BY_ID[sb.id])))); if(c&&has('gap')){ ids.push('gap',c.id); rest.push('with '+subjOf(c).o); } };
     const addDeg=()=>{ if(has('nitnoi')&&chance(.35)){ ids.push('nitnoi'); rest.push('a little'); } else if(has('maak')){ ids.push('maak'); rest.push('a lot'); } };
     if(HARDB()){ // 🔥 Harder stacks adjuncts — companion + place + degree can all land in one sentence: gin khâao gàp khun thîi ráan
