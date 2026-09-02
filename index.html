@@ -1130,14 +1130,57 @@ const FRAMES=[
       if(!poss) return null; return {ids:[p.id,'cheu','arai'],en:`What's ${poss} name?`,tip:TIP.name}; }
     const n=pk(POS('n').filter(x=>['raan','rot','aahaan'].includes(x.id))), d=pk(POS('dem').filter(x=>!G(x).an)); if(!n||!d) return null;
     return {ids:[n.id,d.id,'cheu','arai'],en:`What is ${G(d).en} ${G(n).the.replace(/^the /,'')} called?`,tip:TIP.name}; }},
-  {id:'because',w:2.5,gen(){ if(!has('phrowaa')) return null; const sb=subjOf(pk(TELLERS())); if(!sb) return null; const n3=sb.n===3, dnt=n3?"doesn't":"don't", lk=n3?'likes':'like', opts=[];
-    if(has('gin')&&has('phet')&&has('maak')) opts.push({ids:[sb.id,'mai_not','gin','phrowaa','phet','maak'],en:`${sb.s} ${dnt} eat it because it's very spicy.`});
-    if(has('ao')&&has('phaeng')&&has('maak')) opts.push({ids:[sb.id,'mai_not','ao','phrowaa','phaeng','maak'],en:`${sb.s} ${dnt} want it because it's very expensive.`});
-    if(has('bpai')&&has('rorn')&&has('maak')&&has('wannii')) opts.push({ids:[sb.id,'mai_not','bpai','phrowaa','wannii','rorn','maak'],en:`${contr(sb)} not going because it's very hot today.`});
-    if(has('chorp')&&has('thiinii')&&has('aahaan')&&has('aroi')) opts.push({ids:[sb.id,'chorp','thiinii','phrowaa','aahaan','aroi'],en:`${sb.s} ${lk} it here because the food is delicious.`});
-    if(has('chorp')&&has('raan')&&has('nii')&&has('thuuk')) opts.push({ids:[sb.id,'chorp','raan','nii','phrowaa','thuuk'],en:`${sb.s} ${lk} this shop because it's cheap.`});
-    if(has('yaak')&&has('gin')&&has('hiu')&&has('maak')) opts.push({ids:[sb.id,'yaak','gin','phrowaa','hiu','maak'],en:`${sb.s} ${n3?'wants':'want'} to eat because ${contr(sb)} very hungry.`});
-    const o=pk(opts); return o?{ids:o.ids,en:cap(o.en),tip:TIP.because}:null; }},
+  {id:'because',w:2.5,gen(){ if(!has('phrowaa')) return null; const sb=subjOf(pk(TELLERS())); if(!sb) return null;
+    const R=l=>pk(l.filter(x=>x[0].every(has)));
+    const glue=(mainEn,ids,r)=>r?{ids:[...ids,'phrowaa',...r[0]],en:mainEn.replace(/[.?!]$/,'')+' because '+r[1]+'.',tip:TIP.because}:null;
+    const r=Math.random();
+    if(r<.3){ // don't eat / drink / want it because …
+      const v=pk(POS('v').filter(x=>['gin','deum','ao'].includes(x.id))); if(!v) return null;
+      const vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null;
+      let fr=[[['phet','maak'],"it's very spicy"],[['mai_not','aroi'],"it isn't tasty"],[['phaeng','maak'],"it's very expensive"],[['aahaan','mai_not','dii'],"the food isn't good"]];
+      if(v.id==='deum') fr=fr.filter(x=>!x[0].includes('phet')&&!x[0].includes('aahaan'));
+      return glue(enClause(sb,vp,{mood:'stmt',neg:true}),[sb.id,'mai_not',...vp.ids],R(fr)); }
+    if(r<.5){ // not going / coming because …
+      const v=pk(POS('v').filter(x=>G(x).dest)); if(!v) return null;
+      const vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null;
+      return glue(enClause(sb,vp,{mood:'stmt',neg:true}),[sb.id,'mai_not',...vp.ids],R([[['rorn','maak'],"it's very hot"],[['wannii','rorn','maak'],"it's very hot today"],[['phaeng','maak'],"it's very expensive"]])); }
+    if(r<.72){ // want to eat / drink because hungry / it's hot
+      if(!has('yaak')) return null; const v=pk(POS('v').filter(x=>['gin','deum'].includes(x.id))); if(!v) return null;
+      const vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null; const main=enClause(sb,wantVP(vp),{mood:'stmt'});
+      const rs=v.id==='deum'?R([[['rorn','maak'],"it's very hot"]]):(has('hiu')&&has('maak')?[['hiu','maak'],`${contr(sb)} very hungry`]:null);
+      return glue(main,[sb.id,'yaak',...vp.ids],rs); }
+    // like it here / this shop / it there because …
+    const like=POS('v').find(v=>G(v).en==='like'); if(!like) return null; const n3=sb.n===3;
+    const objs=[]; if(has('thiinii')) objs.push({ids:['thiinii'],en:'it here'}); if(has('raan')&&has('nii')) objs.push({ids:['raan','nii'],en:'this shop'}); if(has('thiinan')) objs.push({ids:['thiinan'],en:'it there'});
+    const o=pk(objs); if(!o) return null;
+    return glue(cap(`${sb.s} ${n3?'likes':'like'} ${o.en}.`),[sb.id,like.id,...o.ids],R([[['aahaan','aroi','maak'],"the food is very delicious"],[['thuuk','maak'],"it's very cheap"],[['suay','maak'],"it's very beautiful"],[['aahaan','dii','maak'],"the food is very good"]])); }},
+  {id:'serial',w:2.5,gen(){ // Thai chains verbs: bpai gin khâao = go eat rice — no 'to' in between
+    const mv=pk(POS('v').filter(x=>G(x).dest)); if(!mv) return null;
+    const v=pk(DYN().filter(x=>!G(x).dest&&G(x).comp!==0&&G(x).obj.some(c=>c==='food'||c==='drink'||c==='thing'))); if(!v) return null;
+    const go=G(mv).en, r=Math.random(), sb=subjOf(pk(r<.35?OTHERS():PRONS())); if(!sb) return null;
+    const vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null;
+    let ids=[mv.id,...vp.ids], rest=vp.head+(vp.rest?' '+vp.rest:'');
+    if(hc(.35)){ const d=pk(DESTS(G(mv).dest)); if(d){ const loc=G(d).pos==='loc'; if(loc||has('thii')){ ids=[...ids,...(loc?[d.id]:['thii',d.id])]; rest+=' '+(loc?G(d).en:G(d).at); } } }
+    const tip="Thai chains verbs directly: bpai gin khâao = go eat rice — no 'to' in between", ing=go==='go'?'going':'coming';
+    if(r<.35) return clause(sb,{be:1,rest:`${ing} to ${rest}`,dyn:true},{mood:'yn'},[sb.id,...ids,'mai_q'],{tip});
+    if(r<.55&&has('yaak')) return clause(sb,{head:'want',asp:'simple',rest:`to ${go} ${rest}`,dyn:true},{mood:'stmt'},[sb.id,'yaak',...ids],{tip});
+    if(r<.68&&go==='come') return {ids,en:cap(`come ${rest}!`),req:true,tip};
+    if(r<.8) return clause(sb,{be:1,rest:`${ing} to ${rest}`,dyn:true},{mood:'stmt',neg:true},[sb.id,'mai_not',...ids],{tip});
+    return clause(sb,{be:1,rest:`${ing} to ${rest}`,dyn:true},{mood:'stmt'},[sb.id,...ids],{tip}); }},
+  {id:'twosubj',w:1.5,gen(){ // phǒm gàp khun … = you and I …
+    if(!has('gap')||!has('phom')) return null;
+    const b=pk(PRONS().filter(p=>!fpg(p))); if(!b) return null; const bs=subjOf(b);
+    const sb={id:'phom',s:`${bs.s} and I`,o:`${bs.o} and me`,be:'are',n:2};
+    const v=pk(DYN().filter(x=>G(x).comp!==0)); if(!v) return null;
+    const vp=vpOf(v,sb,{noWith:1}); if(!vp) return null;
+    const tip="gàp joins people too: phǒm gàp khun = you and I — Thai puts phǒm first";
+    if(chance(.3)&&has('yaak')) return clause(sb,wantVP(vp),{mood:'stmt'},['phom','gap',b.id,'yaak',...vp.ids],{tip});
+    return clause(sb,vp,{mood:'stmt'},['phom','gap',b.id,...vp.ids],{tip}); }},
+  {id:'still',w:1.2,gen(){ if(!has('yang')) return null; const p=pk(PRONS()); if(!p) return null; const sb=subjOf(p), r=Math.random();
+    if(r<.5&&has('hiu')){ const c={ids:[p.id,'yang','hiu'],en:cap(`${contr(sb)} still hungry.`),tip:"yang = still — it sits before the verb/adjective; yang mâi = still …n't / not yet"};
+      if(has('maak')&&hc(.3)){ c.ids=[...c.ids,'maak']; c.en=c.en.replace('hungry','very hungry'); } return c; }
+    const v=pk(POS('v').filter(x=>['khaojai','ruu'].includes(x.id))); if(!v) return null; const n3=sb.n===3;
+    return {ids:[p.id,'yang','mai_not',v.id],en:cap(`${sb.s} still ${n3?"doesn't":"don't"} ${G(v).en}.`),tip:"yang mâi + verb = still don't / not yet"}; }},
   {id:'slow',w:1.5,gen(){ if(!has('chaa')) return null; const v=pk(POS('v').filter(x=>['phuut','bpai'].includes(x.id))); if(!v) return null; const en=G(v).en;
     if(chance(.6)&&has('dai')&&has('mai_q')) return {ids:[v.id,'chaa','chaa','dai','mai_q'],en:`Can you ${en} slowly?`,tip:TIP.dbl};
     return {ids:[v.id,'chaa','chaa'],en:cap(`${en} slowly!`),req:true,tip:TIP.dbl}; }},
@@ -1255,7 +1298,11 @@ const FRAMES=[
     let o=pk(opts); if(!o) return null;
     if(o.ids.length===1&&o.cls&&chance(.35)){ const a2=pk(POS('adj').filter(x=>G(x).attr&&G(x).of.includes(o.cls[0]))); if(a2) o={ids:[...o.ids,a2.id],en:`${G(a2).en} ${o.en}`,cls:o.cls}; } // khǒ náam yen = cold water
     else if(o.cls&&has('gap')&&chance(.25)){ const b=pk(opts.filter(x=>x.cls&&x.cls[0]!==o.cls[0])); if(b) o={ids:[o.ids[0],'gap',b.ids[0]],en:`${o.en} and ${b.en}`}; }
-    return {ids:['kho',...o.ids,'khrap'],en:`May I have ${o.en}, please.`,tip:TIP.kho,polite:false}; }},
+    else if(o.ids.length===1&&o.cls&&chance(HARDB()?.5:.3)){ // khǒ náam sǎwng = two waters — the number goes AFTER the noun
+      const pl={naam:'waters',khao_rice:'plates of rice',aahaan:'dishes'}[o.ids[0]], nm=pk(WORDS.filter(w=>w.cat==='Numbers'&&w.id!=='neung'));
+      if(pl&&nm) o={ids:[...o.ids,nm.id],en:`${nm.en.split('/')[0].trim()} ${pl}`,num:1};
+    }
+    return {ids:['kho',...o.ids,'khrap'],en:`May I have ${o.en}, please.`,tip:o.num?"Numbers go AFTER the noun: náam sǎwng = two waters (casual Thai drops the classifier)":TIP.kho,polite:false}; }},
   {id:'exist',w:2,lesson:'exist',gen(){ if(!has('mii')) return null; const l=pk(POS('loc')), n=pk(POS('n')); if(!l||!n) return null; const r=Math.random(), here=G(l).en, thing=G(n).a;
     if(r<.5) return {ids:[l.id,'mii',n.id,'mai_q'],en:`Is there ${thing} ${here}?`,tip:TIP.exist};
     if(r<.75) return {ids:[l.id,'mii',n.id],en:`There is ${thing} ${here}.`,tip:TIP.exist};
