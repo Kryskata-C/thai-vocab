@@ -352,7 +352,7 @@ const WORDS = [
   {id:"bpaet",th:"แปด",rom:"bpàet (paet)",en:"eight",alt:["8"],tone:"low",day:9,cat:"Numbers"},
   {id:"gao",th:"เก้า",rom:"gâo",en:"nine",alt:["9"],tone:"falling",day:9,cat:"Numbers"},
   {id:"sip",th:"สิบ",rom:"sìp",en:"ten",alt:["10"],tone:"low",day:9,cat:"Numbers"},
-  {id:"phuut",th:"พูด",rom:"phûut",en:"say / speak",alt:["speak","talk","say"],tone:"falling",day:9,cat:"Verbs",g:{pos:"v",en:"speak",t:"say",obj:["dem"],asp:"any",with:1,maak:1}},
+  {id:"phuut",th:"พูด",rom:"phûut",en:"say / speak",alt:["speak","talk","say"],tone:"falling",day:9,cat:"Verbs",g:{pos:"v",en:"speak",t:"say",obj:["dem"],qobj:1,asp:"any",with:1,maak:1}}, // qobj: the object slot only fires in wh-questions (phûut à-rai?) — statements stay bare: phûut gàp khun
   {id:"bawk",th:"บอก",rom:"bàwk",en:"tell (someone)",alt:["tell","say"],tone:"low",day:9,cat:"Verbs",g:{pos:"v",en:"tell",obj:["person"],asp:"any",nowh:1,needObj:1}}, // needObj: bàwk always takes a person — never bare
   {id:"dai_get",th:"ได้",rom:"dâi",en:"get / receive",alt:["receive","obtain","got","get","can","able"],tone:"falling",day:9,cat:"Verbs",g:{pos:"get",obj:["food","drink","thing"]}}, // same word as dâi = can (Day 4): BEFORE a noun = get / receive, AFTER a verb = can
   // Day 10 — small talk: how are you, names, understand, a little, slow, because, casual where, hungry, this one / that one
@@ -1040,13 +1040,13 @@ function vpOf(v,sb,opt={}){
   const asp=g.asp==='any'?(chance(.5)?'prog':'simple'):g.asp;
   if(opt.wh==='arai'||opt.wh==='khrai'){ if(!g.obj.length || (opt.wh==='arai'&&!g.obj.some(c=>c!=='person')) || (opt.wh==='khrai'&&!g.obj.includes('person'))) return null; ids.push(opt.wh); head=(opt.wh==='arai'&&g.whEn)||g.t||g.en; } // whEn: tam à-rai = what are you DOING (not making)
   else if(opt.noObj && g.needObj) return null;                                            // this verb can't appear bare
-  else if(!opt.noObj && g.obj.length && (g.needObj||hc(.8))){ obj=objFor(v,sb); if(!obj && g.needObj) return null; if(obj){ ids.push(...obj.ids); head=g.t||g.en; rest.push(obj.en); } }
+  else if(!opt.noObj && g.obj.length && !g.qobj && (g.needObj||hc(.8))){ obj=objFor(v,sb); if(!obj && g.needObj) return null; if(obj){ ids.push(...obj.ids); head=g.t||g.en; rest.push(obj.en); } }
   if(!obj && !ids.includes('arai') && !ids.includes('khrai') && g.it){ head=g.t||g.en; rest.push('it'); }
   if(g.dest){ if(opt.wh==='thiinai') ids.push('thiinai'); else if(!opt.noDest && (opt.needDest||hc(.6))){ const d=pk(DESTS(g.dest)); if(d){ ids.push(d.id); rest.push(G(d).to||G(d).en); } else if(opt.needDest) return null; } }
   else if(opt.wh==='thiinai'){ if(!g.at) return null; ids.push('thiinai'); }
   if(opt.wh==='gapkhrai'){ if(!g.with||!has('gap')) return null; ids.push('gap','khrai'); rest.push('with'); }
   if(!opt.wh && !opt.noAdj){
-    const addPlace=()=>{ const p=pk(DESTS()); if(p){ if(G(p).pos==='loc'){ ids.push(p.id); rest.push(G(p).en); } else if(has('thii')){ ids.push('thii',p.id); rest.push(G(p).at); } } };
+    const addPlace=()=>{ const p=pk(DESTS().filter(x=>!G(x).holds)); if(p){ // no eating "in the bathroom" — holds-restricted places only work in yùu/destination frames if(G(p).pos==='loc'){ ids.push(p.id); rest.push(G(p).en); } else if(has('thii')){ ids.push('thii',p.id); rest.push(G(p).at); } } };
     const addWith=()=>{ const c=pk(PRONS().filter(p=>p.id!==sb.id&&!ids.includes(p.id)&&!(fpg(p)&&fpg(BY_ID[sb.id])))); if(c&&has('gap')){ ids.push('gap',c.id); rest.push('with '+subjOf(c).o); } };
     const addDeg=()=>{ if(has('nitnoi')&&chance(.35)){ ids.push('nitnoi'); rest.push('a little'); } else if(has('maak')){ ids.push('maak'); rest.push('a lot'); } };
     if(HARDB()){ // 🔥 Harder stacks adjuncts — companion + place + degree can all land in one sentence: gin khâao gàp khun thîi ráan
@@ -1063,7 +1063,7 @@ function vpOf(v,sb,opt={}){
 }
 function clause(sb,vp,o,ids,extra){ // optional "wan-níi … / … today"
   ids=ids.slice(); o={...o};
-  if(has('wannii') && vp.dyn && !o.noTime && hc(.1)){ ids.unshift('wannii'); o.tail='today'; if(vp.any) vp={...vp,asp:'prog'}; }
+  if(has('wannii') && vp.dyn && !o.noTime && chance(HARDB()?.2:.1)){ ids.unshift('wannii'); o.tail='today'; if(vp.any) vp={...vp,asp:'prog'}; }
   return {ids,en:enClause(sb,vp,o),...(extra||{})};
 }
 const wantVP=(vp,tail)=>({head:'want',asp:'simple',rest:('to '+vp.head+(vp.rest?' '+vp.rest:'')+(tail||'')).trim(),dyn:true}); // "want to eat rice"
@@ -1160,7 +1160,7 @@ const FRAMES=[
     const go=G(mv).en, r=Math.random(), sb=subjOf(pk(r<.35?OTHERS():PRONS())); if(!sb) return null;
     const vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null;
     let ids=[mv.id,...vp.ids], rest=vp.head+(vp.rest?' '+vp.rest:'');
-    if(hc(.35)){ const d=pk(DESTS(G(mv).dest)); if(d){ const loc=G(d).pos==='loc'; if(loc||has('thii')){ ids=[...ids,...(loc?[d.id]:['thii',d.id])]; rest+=' '+(loc?G(d).en:G(d).at); } } }
+    if(hc(.35)){ const d=pk(DESTS(G(mv).dest).filter(x=>!G(x).holds)); if(d){ const loc=G(d).pos==='loc'; if(loc||has('thii')){ ids=[...ids,...(loc?[d.id]:['thii',d.id])]; rest+=' '+(loc?G(d).en:G(d).at); } } }
     const tip="Thai chains verbs directly: bpai gin khâao = go eat rice — no 'to' in between", ing=go==='go'?'going':'coming';
     if(r<.35) return clause(sb,{be:1,rest:`${ing} to ${rest}`,dyn:true},{mood:'yn'},[sb.id,...ids,'mai_q'],{tip});
     if(r<.55&&has('yaak')) return clause(sb,{head:'want',asp:'simple',rest:`to ${go} ${rest}`,dyn:true},{mood:'stmt'},[sb.id,'yaak',...ids],{tip});
@@ -1326,7 +1326,7 @@ const FRAMES=[
 ];
 const sentKey=s=>s.key||s.ids.join('|');
 function finalizeSent(c){ // optional khráp at the end (English unchanged — the prompt shows a "+ khráp" hint), stable progress key
-  if(has('khrap') && !c.ids.includes('khrap') && c.polite!==false){ const q=/\?$/.test(c.en); if(hc(q?.3:c.req?.5:.1)){ c.ids=[...c.ids,'khrap']; if(c.req) c.en=c.en.replace(/[.!?]$/,m=>', please'+m); else c.polite=true; } }
+  if(has('khrap') && !c.ids.includes('khrap') && c.polite!==false){ const q=/\?$/.test(c.en), pr=q?.3:c.req?.5:.12; if(chance(HARDB()?Math.min(.55,pr*1.5):pr)){ c.ids=[...c.ids,'khrap']; if(c.req) c.en=c.en.replace(/[.!?]$/,m=>', please'+m); else c.polite=true; } }
   c.key=c.ids.join('|'); return c;
 }
 function sentScore(c){
