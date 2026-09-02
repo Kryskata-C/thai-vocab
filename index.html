@@ -1334,20 +1334,21 @@ function sentScore(c){
   const nd=NEWEST_DAY(); let need=0;
   [...new Set(c.ids)].forEach(id=>{ const w=BY_ID[id]; if(w.day===nd) need+=1.2; if(isDue(id)) need+=.8; if(isWeak(id)) need+=1; });
   p+=Math.min(3.5,need);
-  if(HARDB()) p+=Math.min(5,([...new Set(c.ids)].length-4)*1.1); // harder: prefer the longest candidates
+  if(HARDB()){ const L=[...new Set(c.ids)].length; p+=Math.min(8,(L-4)*1.4); if(L<4) p-=4; } // harder: strongly prefer the longest candidates
   const fd=S.settings.focusDay||0;
   if(fd){ const f=[...new Set(c.ids)].filter(id=>BY_ID[id].day===fd && !(c.polite && id==='khrap')).length; c.focus=f; p+=f?3+1.5*Math.min(f,3):-6; }
   if((B.recent||[]).includes(c.key)) p-=8; if((B.recentFrames||[]).includes(c.frame)) p-=1.5;
   return p;
 }
 function genSentence(){
-  const rf=B.recentFrames||[], fd=S.settings.focusDay||0; const short_={phrase:.25,dem_n:.25,what_this:.25,kho:.5,drive:.5,who:.6,maak:.5,slow:.5,name:.6,stop:.5,than:.6,hundred:.5,walk:.6,give:.5};
-  const fr=FRAMES.filter(f=>lessonOn(f.lesson)).map(f=>({f,w:f.w*(rf[0]===f.id?.08:rf.includes(f.id)?.35:1)*(HARDB()?(short_[f.id]||1):1)}));
+  const rf=B.recentFrames||[], fd=S.settings.focusDay||0; // 🔥 Harder reweights frames: down for short ones, up for the multi-clause / stacked ones
+  const hardw={phrase:.2,dem_n:.2,what_this:.25,kho:.5,drive:.4,who:.5,slow:.5,name:.5,still:.6,stop:.5,than:.6,hundred:.5,walk:.6,give:.5,serial:1.5,because:1.7,twosubj:1.4,laew:1.25,svo:1.2,yaak:1.25};
+  const fr=FRAMES.filter(f=>lessonOn(f.lesson)).map(f=>({f,w:f.w*(rf[0]===f.id?.08:rf.includes(f.id)?.35:1)*(HARDB()?(hardw[f.id]||1):1)}));
   let best=null;
   for(let tries=0;tries<(fd?16:8);tries++){ // pick a frame (weighted, avoiding recent ones), then the best of its fills; with a focus day, compare several frames
     let r=Math.random()*fr.reduce((a,x)=>a+x.w,0), f=fr[fr.length-1].f; for(const x of fr){ r-=x.w; if(r<=0){ f=x.f; break; } }
     const pool={};
-    for(let i=0;i<(fd?20:14);i++){ let c=null; try{ c=f.gen(); }catch(e){ c=null; } if(!c||!c.ids||c.ids.length<2||!c.ids.every(has)) continue; c.frame=f.id; finalizeSent(c); if(!pool[c.key]) pool[c.key]=c; }
+    for(let i=0;i<(fd?20:HARDB()?18:14);i++){ let c=null; try{ c=f.gen(); }catch(e){ c=null; } if(!c||!c.ids||c.ids.length<2||!c.ids.every(has)) continue; c.frame=f.id; finalizeSent(c); if(!pool[c.key]) pool[c.key]=c; }
     const list=Object.values(pool); if(!list.length) continue;
     list.forEach(c=>c.p=sentScore(c)); list.sort((a,b)=>b.p-a.p);
     if(!best||list[0].p>best.p) best=list[0];
