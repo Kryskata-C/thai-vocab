@@ -386,6 +386,15 @@ const WORDS = [
   {id:"ngiap",th:"เงียบ",rom:"ngîap",en:"quiet",alt:["silent","calm"],tone:"falling",day:12,cat:"Describe",g:{pos:"adj",en:"quiet",of:["place"]}}, // ngîap ngîap! = shh; ráan ngîap = a quiet shop
   {id:"jing",th:"จริง",rom:"jing",en:"true",alt:["real","really","truly"],tone:"mid",day:12,cat:"Glue",g:{pos:"part"}}, // jing mǎi? = really?; doubled jing-jing = really/truly
   {id:"thuuk_right",th:"ถูก",rom:"thùuk",en:"correct",alt:["right","thats right","exactly","cheap","inexpensive"],tone:"low",day:12,cat:"Describe",g:{pos:"part"}}, // same word as thùuk = cheap (Day 8) — second job: correct. thùuk láew = that's right
+  // Day 13 — time words and rest: day, morning, evening, tomorrow, yesterday, sleep, tired, child
+  {id:"wan",th:"วัน",rom:"wan",en:"day",alt:["a day"],tone:"mid",day:13,cat:"Time"}, // the wan inside wan-níi; wan yùt = day off
+  {id:"dtoonchao",th:"ตอนเช้า",rom:"dtɔɔn-cháo (dtorn-chao)",en:"morning",alt:["in the morning"],tone:"mid+high",day:13,cat:"Time",g:{pos:"time",en:"in the morning"}}, // dtɔɔn + cháo
+  {id:"dtoonyen",th:"ตอนเย็น",rom:"dtɔɔn-yen (dtorn-yen)",en:"evening",alt:["in the evening"],tone:"mid+mid",day:13,cat:"Time",g:{pos:"time",en:"in the evening"}}, // dtɔɔn + yen — both already yours
+  {id:"phrungnii",th:"พรุ่งนี้",rom:"phrûng-níi (phrung-nii)",en:"tomorrow",tone:"falling+high",day:13,cat:"Time",g:{pos:"time",en:"tomorrow"}}, // same níi as wan-níi
+  {id:"meuawaan",th:"เมื่อวาน",rom:"mʉ̂a-waan (meua-waan)",en:"yesterday",tone:"falling+mid",day:13,cat:"Time",g:{pos:"time",en:"yesterday"}}, // shares its front with mʉ̂a-rài; the time word alone makes the past
+  {id:"noon",th:"นอน",rom:"nɔɔn (norn)",en:"sleep",alt:["sleeping","go to bed","lie down"],tone:"mid",day:13,cat:"Verbs",g:{pos:"v",en:"sleep",obj:[],asp:"any",maak:1}},
+  {id:"nuai",th:"เหนื่อย",rom:"nʉ̀ai (neuai / nuai)",en:"tired",alt:["exhausted","sleepy"],tone:"low",day:13,cat:"Describe",g:{pos:"adj",en:"tired",of:["person"]}}, // adjective — no bpen: phǒm nʉ̀ai
+  {id:"dek",th:"เด็ก",rom:"dèk",en:"child",alt:["kid","kids","children","baby"],tone:"low",day:13,cat:"People",g:{pos:"n",cls:["person"],a:"a child",the:"the child"}},
 ];
 const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
 
@@ -421,6 +430,8 @@ const PATTERNS = [
    fills:[{id:"phuut",en:"Stop talking."},{id:"gin",en:"Stop eating."},{id:"duu",en:"Stop looking."},{id:"len",en:"Stop playing."}]},
   {id:"dtong",name:"phǒm dtɔ̂ng [verb]",gloss:"I have to [verb]  — dtɔ̂ng sits before the verb; mâi dtɔ̂ng = no need to",ids:["phom","dtong","_"],
    fills:[{id:"bpai",en:"I have to go."},{id:"gin",en:"I have to eat."},{id:"phuut",en:"I have to speak."},{id:"tam",en:"I have to do it."}]},
+  {id:"timeword",name:"[time] phǒm bpai bâan",gloss:"Time words sit at the FRONT — no tense endings, the time word does all the work",ids:["_","phom","bpai","baan"],
+   fills:[{id:"wannii",en:"Today I'm going home."},{id:"dtoonchao",en:"In the morning I go home."},{id:"dtoonyen",en:"In the evening I go home."},{id:"phrungnii",en:"Tomorrow I'm going home."},{id:"meuawaan",en:"Yesterday I went home."}]},
   {id:"nii",name:"nîi [X]",gloss:"This is [X]  — no word for 'is' with adjectives",ids:["nii","_"],
    fills:[{id:"aroi",en:"This is delicious."},{id:"phet",en:"This is spicy."},{id:"suay",en:"This is beautiful."},{id:"khao_rice",en:"This is rice."},{id:"naam",en:"This is water."}]},
   {id:"chorp",name:"phǒm chôrp [X]",gloss:"I like [X]",ids:["phom","chorp","_"],
@@ -977,7 +988,8 @@ const DESTS=dir=>[...POS('loc').filter(l=>dir==='away'?!G(l).prox:dir==='toward'
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 function enS3(v){ const [h,...r]=v.split(' '); let f; if(h==='have') f='has'; else if(h==='do') f='does'; else if(/(s|sh|ch|x|z|o)$/.test(h)) f=h+'es'; else if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ies'; else f=h+'s'; return [f,...r].join(' '); }
 function enIng(v){ const [h,...r]=v.split(' '); let f; if(/ie$/.test(h)) f=h.slice(0,-2)+'ying'; else if(/[^e]e$/.test(h)) f=h.slice(0,-1)+'ing'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ing'; else f=h+'ing'; return [f,...r].join(' '); }
-function enPP(v){ const [h,...r]=v.split(' '); const IR={eat:'eaten',drink:'drunk',go:'gone',come:'come',see:'seen',know:'known',have:'had',take:'taken',get:'got',buy:'bought',say:'said',speak:'spoken',tell:'told',look:'looked',make:'made',do:'done'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); }
+function enPP(v){ const [h,...r]=v.split(' '); const IR={eat:'eaten',drink:'drunk',go:'gone',come:'come',see:'seen',know:'known',have:'had',take:'taken',get:'got',buy:'bought',say:'said',speak:'spoken',tell:'told',look:'looked',make:'made',do:'done',sleep:'slept',think:'thought'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); }
+function enPast(v){ const [h,...r]=v.split(' '); const IR={eat:'ate',drink:'drank',go:'went',come:'came',see:'saw',know:'knew',have:'had',take:'took',get:'got',buy:'bought',say:'said',speak:'spoke',tell:'told',make:'made',do:'did',think:'thought',sleep:'slept'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); } // simple past for mʉ̂a-waan sentences
 function enCmp(a){ const IR={good:'better',hot:'hotter',big:'bigger'}; if(IR[a]) return IR[a]; if(/[^aeiou]y$/.test(a)) return a.slice(0,-1)+'ier';
   if(a.length<=5&&!/ /.test(a)) return (/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(a)?a+a.slice(-1):a)+(/e$/.test(a)?'r':'er'); return 'more '+a; } // cheap→cheaper, big→bigger, spicy→spicier, expensive→more expensive
 const CONTR={I:"I'm",you:"you're",he:"he's",she:"she's",we:"we're",they:"they're",it:"it's"};
@@ -1062,9 +1074,13 @@ function vpOf(v,sb,opt={}){
   }
   return {ids,head,rest:rest.join(' '),asp,dyn:g.asp!=='simple',any:g.asp==='any'};
 }
-function clause(sb,vp,o,ids,extra){ // optional "wan-níi … / … today"
+function clause(sb,vp,o,ids,extra){ // optional leading time word: wan-níi (today), dtɔɔn-cháo/-yen (habitual), phrûng-níi (tomorrow)
   ids=ids.slice(); o={...o};
-  if(has('wannii') && vp.dyn && !o.noTime && chance(HARDB()?.2:.1)){ ids.unshift('wannii'); o.tail='today'; if(vp.any) vp={...vp,asp:'prog'}; }
+  if(vp.dyn && !o.noTime && chance(HARDB()?.2:.12)){
+    const tw=pk([has('wannii')?['wannii','today','prog']:null,has('dtoonchao')?['dtoonchao','in the morning','simple']:null,
+      has('dtoonyen')?['dtoonyen','in the evening','simple']:null,has('phrungnii')?['phrungnii','tomorrow','prog']:null].filter(Boolean));
+    if(tw){ ids.unshift(tw[0]); o.tail=tw[1]; if(vp.any) vp={...vp,asp:tw[2]}; }
+  }
   return {ids,en:enClause(sb,vp,o),...(extra||{})};
 }
 const wantVP=(vp,tail)=>({head:'want',asp:'simple',rest:('to '+vp.head+(vp.rest?' '+vp.rest:'')+(tail||'')).trim(),dyn:true}); // "want to eat rice"
@@ -1087,7 +1103,9 @@ const TIP={mai_q:"mǎi turns a statement into a yes/no question — it always go
   dern:"dern = walk — chain it with bpai: dern bpai ráan = walk to the shop; dern lên = go for a stroll (walk-play)",
   hai:"hâi = give / for / let: hâi phǒm = give me · tam hâi phǒm = do it for me · hâi khǎo bpai = let him go",
   dtae:"dtɛ̀ɛ = but — joins two statements and the repeated subject drops: phaeng dtɛ̀ɛ à-ròi = expensive but delicious",
-  jing:"jing-jing (doubled) = really / truly; jing mǎi? = really? — you'll say this constantly"};
+  jing:"jing-jing (doubled) = really / truly; jing mǎi? = really? — you'll say this constantly",
+  meuawaan:"mʉ̂a-waan = yesterday — no tense endings: the time word alone puts the whole sentence in the past",
+  time:"Time words (dtɔɔn-cháo, phrûng-níi…) sit at the FRONT of the sentence — the verb never changes"};
 // ---- Grammar lessons that gate frames. A frame with `lesson:"x"` only fires once LESSONS.x.day is set (and that day exists in the bank).
 //      day:null = upcoming — the pattern is known to the generator but not taught yet, so it never appears in drills.
 const LESSONS={
@@ -1129,7 +1147,7 @@ const FRAMES=[
   {id:'name',w:2.5,gen(){ if(!has('cheu')||!has('arai')) return null;
     if(chance(.6)){ const p=pk(OTHERS().filter(x=>G(x).s!=='we')); if(!p) return null; const sb=subjOf(p), poss={you:'your',he:'his',she:'her',they:'their'}[sb.s];
       if(!poss) return null; return {ids:[p.id,'cheu','arai'],en:`What's ${poss} name?`,tip:TIP.name}; }
-    const n=pk(POS('n').filter(x=>['raan','rot','aahaan'].includes(x.id))), d=pk(POS('dem').filter(x=>!G(x).an)); if(!n||!d) return null;
+    const n=pk(POS('n').filter(x=>['raan','rot','aahaan','dek'].includes(x.id))), d=pk(POS('dem').filter(x=>!G(x).an)); if(!n||!d) return null;
     return {ids:[n.id,d.id,'cheu','arai'],en:`What is ${G(d).en} ${G(n).the.replace(/^the /,'')} called?`,tip:TIP.name}; }},
   {id:'because',w:2.5,gen(){ if(!has('phrowaa')) return null; const sb=subjOf(pk(TELLERS())); if(!sb) return null;
     const R=l=>pk(l.filter(x=>x[0].every(has)));
@@ -1145,10 +1163,12 @@ const FRAMES=[
       const v=pk(POS('v').filter(x=>G(x).dest)); if(!v) return null;
       const vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null;
       return glue(enClause(sb,vp,{mood:'stmt',neg:true}),[sb.id,'mai_not',...vp.ids],R([[['rorn','maak'],"it's very hot"],[['wannii','rorn','maak'],"it's very hot today"],[['phaeng','maak'],"it's very expensive"]])); }
-    if(r<.72){ // want to eat / drink because hungry / it's hot
-      if(!has('yaak')) return null; const v=pk(POS('v').filter(x=>['gin','deum'].includes(x.id))); if(!v) return null;
+    if(r<.72){ // want to eat / drink / sleep because hungry / it's hot / tired
+      if(!has('yaak')) return null; const v=pk(POS('v').filter(x=>['gin','deum','noon'].includes(x.id))); if(!v) return null;
       const vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null; const main=enClause(sb,wantVP(vp),{mood:'stmt'});
-      const rs=v.id==='deum'?R([[['rorn','maak'],"it's very hot"]]):(has('hiu')&&has('maak')?[['hiu','maak'],`${contr(sb)} very hungry`]:null);
+      const rs=v.id==='deum'?R([[['rorn','maak'],"it's very hot"]])
+        :v.id==='noon'?(has('nuai')&&has('maak')?[['nuai','maak'],`${contr(sb)} very tired`]:null)
+        :(has('hiu')&&has('maak')?[['hiu','maak'],`${contr(sb)} very hungry`]:null);
       return glue(main,[sb.id,'yaak',...vp.ids],rs); }
     // like it here / this shop / it there because …
     const like=POS('v').find(v=>G(v).en==='like'); if(!like) return null; const n3=sb.n===3;
@@ -1228,6 +1248,10 @@ const FRAMES=[
       add([sb.id,'yaak','bpai','dtae','mai_not','mii','ngern'],`${cap(sb.s)} ${n3?'wants':'want'} to go but ${n3?(sb.s==='she'?'she':'he')+" doesn't":sb.s+" don't"} have money.`);
       add([sb.id,'hiu','dtae','mai_not','yaak','gin'],`${cap(contr(sb))} hungry but ${sb.s} ${n3?"doesn't":"don't"} want to eat.`); }
     const o=pk(T); return o?{ids:o.ids,en:o.en,tip:TIP.dtae}:null; }},
+  {id:'yesterday',w:2,gen(){ if(!has('meuawaan')) return null; const r=Math.random(), sb=subjOf(pk(r<.7?TELLERS():OTHERS())); if(!sb) return null;
+    const v=pk(DYN().filter(x=>!G(x).nowh)); if(!v) return null; const vp=vpOf(v,sb,{noAdj:true}); if(!vp) return null; const rest=vp.rest?' '+vp.rest:'';
+    if(r<.7) return {ids:['meuawaan',sb.id,...vp.ids],en:cap(`${sb.s} ${enPast(vp.head)}${rest} yesterday.`),tip:TIP.meuawaan};
+    return {ids:['meuawaan',sb.id,...vp.ids,'mai_q'],en:cap(`did ${sb.s} ${vp.head}${rest} yesterday?`),tip:TIP.meuawaan}; }},
   {id:'hundred',w:1.5,gen(){ if(!has('roi')) return null; const D=[['neung','one'],['sawng','two'],['saam','three'],['sii','four'],['haa','five'],['hok','six'],['jet','seven'],['bpaet','eight'],['gao','nine']].filter(x=>has(x[0])); if(!D.length) return null;
     const h=pk(D); let ids=[h[0],'roi'], en=`${h[1]} hundred`;
     if(chance(.45)&&has('sip')){ const TENS={three:'thirty',four:'forty',five:'fifty',six:'sixty',seven:'seventy',eight:'eighty',nine:'ninety'};
@@ -1322,7 +1346,8 @@ const FRAMES=[
       ['phet','nitnoi','khrap','A little spicy, please.'],['khun','yuunai','Where are you?'],['phom','hiu','maak',"I'm so hungry!"],['hiu','mai_q','Are you hungry?'],['kho','annii','khrap','May I have this one, please.'],
       ['reo','reo','Hurry up!'],['khun','phuut','reo','maak',"You speak so fast!"],['sip','gwaa','More than ten.'],['neung','roi','One hundred.'],['bpai','baan','laew',"I already went home."],['khun','tam','arai','What are you doing?'],['sang','laew','khrap','Already ordered.'],['khun','sang','arai','What are you ordering?'],
       ['mai_not','dtong','khrap','No need, thank you.'],['jing','mai_q','Really?'],['khothoot','jing','jing',"I'm really sorry."],['ngiap','ngiap','Shh — quiet down!'],
-      ['thuuk_right','laew',"That's right."],['dii','laew',"That's fine."],['yut','khit','maak','Stop thinking so much!']];
+      ['thuuk_right','laew',"That's right."],['dii','laew',"That's fine."],['yut','khit','maak','Stop thinking so much!'],
+      ['wan','yut','A day off.'],['phom','nuai','maak',"I'm so tired."],['bpai','noon',"I'm going to sleep."],['nuai','mai_q','Are you tired?']];
     const p=pk(P.filter(x=>x.slice(0,-1).every(has))); return p?{ids:p.slice(0,-1),en:p[p.length-1],polite:false}:null; }},
 ];
 const sentKey=s=>s.key||s.ids.join('|');
@@ -1419,7 +1444,7 @@ function matchSentence(ids,input,strict){
 const EN_PHRASES=[[/\bi'?d like\b/g,'i want'],[/\bwould like\b/g,'want'],[/\b(?:can|could|may) i (?:have|get)\b/g,'may i have'],[/\bgive me\b/g,'may i have'],[/\bexcuse me\b/g,'sorry'],
   [/\b(said|says|say|know|knows|knew|think|thinks|thought|told|tells|tell)\s+that\b/g,'$1'],[/\ba little bit\b/g,'abit'],[/\ba little\b/g,'abit'],[/\ba bit\b/g,'abit'],[/\bslightly\b/g,'abit'],[/\bpull over\b/g,'stop'],[/\bthank you\b/g,'thanks'],[/\bthanks a lot\b/g,'thanks very'],[/\bthank you very much\b/g,'thanks very'],[/\ba lot\b/g,'very'],[/\bso much\b/g,'very'],[/\breally\b/g,'very'],[/\bso\b/g,'very'],
   [/\bwanna\b/g,'want to'],[/\bgonna\b/g,'going to'],[/\bwant to\b/g,'want'],[/\bwould you like\b/g,'want'],[/\bdo you want\b/g,'want'],[/\bdon'?t want\b/g,'not want'],[/\bno thanks\b/g,'not want'],[/\bthere is\b/g,'have'],[/\bthere are\b/g,'have'],[/\bthere'?s\b/g,'have'],[/\bis there\b/g,'have'],[/\bare there\b/g,'have']];
-const EN_IRR={am:'be',is:'be',are:'be',was:'be',were:'be',has:'have',had:'have',does:'do',did:'do',goes:'go',went:'go',gone:'go',ate:'eat',eaten:'eat',drank:'drink',drunk:'drink',came:'come',saw:'see',seen:'see',knew:'know',known:'know',took:'take',taken:'take',bought:'buy',got:'get',said:'say',told:'tell',spoke:'speak',spoken:'speak',made:'make',done:'do',people:'person',men:'man',no:'not',could:'can',may:'can',me:'i',my:'i',him:'he',her:'she',us:'we',them:'they',nope:'not'};
+const EN_IRR={am:'be',is:'be',are:'be',was:'be',were:'be',has:'have',had:'have',does:'do',did:'do',goes:'go',went:'go',gone:'go',ate:'eat',eaten:'eat',drank:'drink',drunk:'drink',came:'come',saw:'see',seen:'see',knew:'know',known:'know',took:'take',taken:'take',bought:'buy',got:'get',said:'say',told:'tell',spoke:'speak',spoken:'speak',made:'make',done:'do',slept:'sleep',thought:'think',children:'child',kids:'kid',people:'person',men:'man',no:'not',could:'can',may:'can',me:'i',my:'i',him:'he',her:'she',us:'we',them:'they',nope:'not'};
 const EN_STOP=new Set(['a','an','the','to','be','do','it','please','yes','ok','okay','hey','oh','and','of','at','in','on','some','any']);
 function enStem(t){ t=EN_IRR[t]||t; if(t.length>4&&/ing$/.test(t)) t=t.slice(0,-3); else if(t.length>4&&/ed$/.test(t)) t=t.slice(0,-2); else if(t.length>3&&/ies$/.test(t)) t=t.slice(0,-3)+'y';
   else if(t.length>3&&/(s|sh|ch|x|z|o)es$/.test(t)) t=t.slice(0,-2); else if(t.length>3&&/[^s]s$/.test(t)) t=t.slice(0,-1); if(t.length>3&&/e$/.test(t)) t=t.slice(0,-1); return t; }
