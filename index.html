@@ -43,7 +43,7 @@
     backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);
     padding:6px 6px calc(6px + env(safe-area-inset-bottom));display:flex;justify-content:center}
   .nav-inner{display:flex;width:100%;max-width:560px;gap:2px}
-  .nav button{flex:1;border:0;background:transparent;color:var(--muted);font-size:10px;font-weight:600;
+  .nav button{flex:1;min-width:0;border:0;background:transparent;color:var(--muted);font-size:10px;font-weight:600;
     padding:6px 0;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;transition:.15s}
   .nav button .ic{font-size:20px;line-height:1}
   .nav button.active{color:var(--gold);background:rgba(231,178,76,.1)}
@@ -222,6 +222,12 @@
   .qrow .p small{color:var(--muted)}
   .qrow .t{color:var(--muted);font-size:12px;white-space:nowrap}
   .qrow .t.slow{color:var(--clay)}
+  /* audit */
+  .abar{height:4px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-top:18px}
+  .abar i{display:block;height:100%;width:0;background:var(--jade);animation:afill 6s linear forwards}
+  @keyframes afill{0%{width:0;background:var(--jade)}49.9%{background:var(--jade)}50%{width:50%;background:var(--gold)}99.9%{background:var(--gold)}100%{width:100%;background:var(--clay)}}
+  .at{font-size:11.5px;color:var(--muted);margin-top:2px}.at.k{color:var(--gold)}.at.f{color:#f2c3b1}
+  .dots{letter-spacing:.3em;color:var(--jade);font-size:15px}
   .delta{font-weight:600}.delta.up{color:var(--jade)}.delta.down{color:#f2c3b1}.delta.flat{color:var(--muted)}
   .empty{text-align:center;color:var(--muted);font-size:14px;padding:40px 20px;line-height:1.6}
   .foot{text-align:center;font-size:11px;color:var(--muted);margin-top:18px;line-height:1.7}
@@ -259,6 +265,7 @@
   <button data-mode="build"><span class="ic">🧩</span>Build</button>
   <button data-mode="tones"><span class="ic">🎵</span>Tones</button>
   <button data-mode="test"><span class="ic">🎓</span>Test</button>
+  <button data-mode="audit"><span class="ic">🔎</span>Audit</button>
   <button data-mode="progress"><span class="ic">📈</span>Progress</button>
 </div></nav>
 <div class="toast" id="toast"></div>
@@ -487,6 +494,7 @@ function record(id,ok,dir){
   dir=dir||"th"; const s=stD(id,dir); s.seen++; s.last=Date.now();
   if(ok){ s.right++; s.streak=(s.streak||0)+1; s.due=Date.now()+INTERVALS[Math.min(s.streak,INTERVALS.length-1)]*864e5; }
   else { s.wrong++; s.streak=0; s.due=Date.now(); }
+  if(ok && S.audit && S.audit.boost) S.audit.boost=S.audit.boost.filter(x=>x!==id); // recovered → no longer pushed to the top (see Audit)
   S.stats[id]={...(S.stats[id]||{}),[dir]:s}; logActivity(); save();
 }
 function knownD(id,dir){ const s=stD(id,dir); return s.right>=3 && s.streak>=2; }
@@ -652,6 +660,7 @@ function practicePool(){
   if(P.filter==="Weak") return WORDS.filter(w=>isWeakD(w.id,d));
   if(P.filter==="New") return WORDS.filter(w=>stD(w.id,d).seen===0);
   if(P.filter==="Test") return WORDS.filter(w=>(P.testIds||[]).includes(w.id)); // words missed in the last graded test
+  if(P.filter==="Audit") return WORDS.filter(w=>auditBoost().includes(w.id));   // words lost in the last audit, until answered right once
   if(P.filter==="All") return WORDS;
   return WORDS.filter(w=>w.cat===P.filter);
 }
@@ -662,6 +671,7 @@ function priority(w,dir){
   if(s.seen>0 && (s.due||0)<=Date.now()) p+=6;  // due for review
   p+=s.wrong*2 - s.streak;                      // weak words rise, solid words sink
   if(s.last && Date.now()-s.last<60e3) p-=8;    // avoid immediate repeats
+  if(auditBoost().includes(w.id)) p+=20;        // lost in an audit → top of the queue until answered right
   if(mode==="today" && P.day!=="review" && focusIds().includes(w.id)) p+=5; // 🎯 focused words surface more; others stay in the mix
   return p;
 }
@@ -669,12 +679,12 @@ function pickNext(){ const p=practicePool(); if(!p.length) return null; const d=
 
 // ---- daily review queue: due words from earlier days (weaker direction first) + every word of the newest day, both directions
 function reviewQueue(){
-  const nd=NEWEST_DAY(), old=[];
+  const nd=NEWEST_DAY(), old=[], bs=auditBoost();
   WORDS.filter(w=>w.day<nd).forEach(w=>{
-    const dirs=DIRS.filter(d=>isDueD(w.id,d));
-    if(!dirs.length) return;
+    const b=bs.includes(w.id), dirs=DIRS.filter(d=>isDueD(w.id,d));
+    if(!dirs.length){ if(!b) return; dirs.push(...DIRS); }                       // lost in an audit → reviewed first, even when not due
     const dir=dirs.sort((a,b)=>(stD(w.id,b).wrong-stD(w.id,b).streak)-(stD(w.id,a).wrong-stD(w.id,a).streak))[0];
-    old.push({id:w.id,dir,p:stD(w.id,dir).wrong*2-stD(w.id,dir).streak+Math.random()});
+    old.push({id:w.id,dir,p:(b?100:0)+stD(w.id,dir).wrong*2-stD(w.id,dir).streak+Math.random()});
   });
   old.sort((a,b)=>b.p-a.p);
   const q=old.slice(0,S.settings.reviewOld).map(({id,dir})=>({id,dir}));
@@ -700,14 +710,14 @@ function renderPractice(){
     else P.cur=null;
   }
   const listenOk = P.sub!=="listen" || hasThaiVoice() || !window.speechSynthesis;
-  const filters=["All","Due","Weak","New",...((P.testIds||[]).length?["Test"]:[]),...CATS()];
+  const filters=["All","Due","Weak","New",...((P.testIds||[]).length?["Test"]:[]),...(auditBoost().length||P.filter==="Audit"?["Audit"]:[]),...CATS()];
   const cnt=f=>{ const old=P.filter; P.filter=f; const n=practicePool().length; P.filter=old; return n; };
   let html=review?'':`
     <div class="seg" id="subseg">${SUBS.map(([k,l])=>`<button data-sub="${k}" class="${P.sub===k?'active':''}">${l}</button>`).join('')}</div>`;
   html+=`
     ${todayMode?todayHeader(R):`<div class="chips" id="chips">${filters.map(f=>{
-      const n=cnt(f); const cls=f==="Weak"||f==="Test"?"clay":f==="Due"?"jade":"";
-      return `<button class="chip ${cls} ${f===P.filter?'active':''}" data-f="${f}">${f==="Test"?"🎓 Shaky from test":f}${["Due","Weak","New","Test"].includes(f)?` ${n}`:''}</button>`; }).join('')}</div>`}
+      const n=cnt(f); const cls=f==="Weak"||f==="Test"||f==="Audit"?"clay":f==="Due"?"jade":"";
+      return `<button class="chip ${cls} ${f===P.filter?'active':''}" data-f="${f}">${f==="Test"?"🎓 Shaky from test":f==="Audit"?"🔎 Lost in audit":f}${["Due","Weak","New","Test","Audit"].includes(f)?` ${n}`:''}</button>`; }).join('')}</div>`}
     <div class="barlabel"><span>Today ${Math.min(tc,goal)}/${goal}${tc>=goal?' ✓ goal reached':''}</span><span>${review?`Review ${Math.min(R.i,R.queue.length)}/${R.queue.length}`:`Session ${P.session.right}/${P.session.n}`}</span></div>
     <div class="bar ${tc>=goal?'jade':''}"><i style="width:${Math.min(100,tc/goal*100)}%"></i></div>`;
 
@@ -720,7 +730,7 @@ function renderPractice(){
   }
   if(!P.cur) P.cur=pickNext();
   if(!P.cur){
-    html+=`<div class="empty">${todayMode?`No words for Day ${TODAY_DAY()} yet.`:P.filter==="Due"?"Nothing due right now 🎉<br>Come back later or practise another set.":P.filter==="Weak"?"No weak words 🎉<br>Words you miss will show up here.":P.filter==="New"?"You've seen every word! Switch to All or Due.":"No words in this set yet."}</div>`;
+    html+=`<div class="empty">${todayMode?`No words for Day ${TODAY_DAY()} yet.`:P.filter==="Due"?"Nothing due right now 🎉<br>Come back later or practise another set.":P.filter==="Weak"?"No weak words 🎉<br>Words you miss will show up here.":P.filter==="New"?"You've seen every word! Switch to All or Due.":P.filter==="Audit"?"Every word from the audit answered right ✓<br>Run a new audit when you want to check again.":"No words in this set yet."}</div>`;
     stage().innerHTML=html; bindPractice(); renderStat(); return;
   }
   const w=P.cur;
@@ -1808,6 +1818,198 @@ function renderTestResult(r){
 }
 
 // ---------------------------------------------------------------------
+//  AUDIT  (one self-graded pass over the WHOLE bank after time away: see
+//  the word, think, Reveal, tap Knew it / Forgot. The time from the word
+//  appearing to Reveal is the signal — under 3 s solid, 3–6 s shaky even
+//  if you knew it, over 6 s forgotten whatever you tap. Results by day
+//  batch and category, then a drill on just the lost words: mixed typed +
+//  listening questions, a word leaves after 3 correct in a row. Nothing
+//  here touches the streak or the review schedule — lost words are only
+//  pushed to the top of Practice until you answer them right there.)
+// ---------------------------------------------------------------------
+const AUDIT_SLOW=3000, AUDIT_FORGOT=6000, DRILL_STREAK=3;
+const AUDIT_G={s:"solid",k:"shaky",f:"forgotten"};
+const DRILL_TYPES=["th2en","en2th","listen"], DRILL_LABEL={th2en:"Thai → EN",en2th:"EN → Thai",listen:"Listen 🔊"};
+let A={view:"setup",live:false,t0:0,tid:null,shownAt:0,result:null,confirm:null,dq:null,dphase:"ask",dok:false,dtyped:"",dprev:null};
+// S.audit = {dir, run (the audit in progress — survives closing the tab), drill, history, boost (ids pushed to the top of Practice)}
+function AU(){ const a=S.audit||(S.audit={}); if(!Array.isArray(a.history)) a.history=[]; if(!Array.isArray(a.boost)) a.boost=[]; if(a.dir!=="th") a.dir="en"; a.run=a.run||null; a.drill=a.drill||null; return a; }
+const auditBoost=()=>AU().boost;
+const auditGrade=r=>(!r[2]||r[1]>AUDIT_FORGOT)?"f":r[1]>=AUDIT_SLOW?"k":"s";   // r = [id, ms to reveal, knew it?]
+function auditStats(rec){
+  const rows=rec.res.filter(x=>BY_ID[x[0]]).map(x=>({id:x[0],w:BY_ID[x[0]],ms:x[1],knew:!!x[2],g:auditGrade(x)}));
+  const by=g=>rows.filter(x=>x.g===g).sort((a,b)=>b.ms-a.ms), s=by("s"), k=by("k"), f=by("f");
+  return {rows,s,k,f,med:median(rows.map(x=>x.ms)),pct:rows.length?Math.round(s.length/rows.length*100):0,lost:[...f,...k].map(x=>x.id)};
+}
+function auditPrev(rec){ const H=AU().history, i=H.indexOf(rec); return H.slice(0,i<0?H.length:i).reverse().find(x=>x.dir===rec.dir&&(x.scope||"all")===(rec.scope||"all"))||null; }
+function auditRequeue(r){ const rest=r.order.length-r.i-1; if(rest>0){ const j=r.i+1+Math.floor(Math.random()*rest); [r.order[r.i],r.order[j]]=[r.order[j],r.order[r.i]]; } }
+function auditStart(ids,scope,dir){ const a=AU(); a.run={dir:dir||a.dir,scope:scope||"all",order:shuffle(ids.slice()),i:0,res:[],pend:null}; save(); A.live=true; A.tid=null; A.view="run"; renderAudit(); window.scrollTo({top:0}); }
+function auditResume(){ const r=AU().run; if(!r) return; if(r.pend==null){ auditRequeue(r); save(); } A.live=true; A.tid=null; A.view="run"; renderAudit(); } // the word you left on was already seen → it moves back into the pile
+function auditPause(){ if(!A.live) return; A.live=false; A.tid=null; A.view="setup"; }
+function auditFinish(){
+  const a=AU(), r=a.run; if(!r) return; a.run=null; A.live=false; A.tid=null;
+  if(!r.res.length){ save(); A.view="setup"; toast('Nothing covered yet — audit discarded'); return renderAudit(); }
+  const rec={date:new Date().toISOString(),dir:r.dir,scope:r.scope,total:r.order.filter(id=>BY_ID[id]).length,res:r.res};
+  a.history=[...a.history,rec].slice(-20); save();
+  A.result=rec; A.view="result"; renderAudit(); window.scrollTo({top:0});
+}
+function renderAudit(){
+  const a=AU(); A.confirm=null;
+  if(A.view==="run"&&(!a.run||!A.live)) A.view="setup";
+  if(A.view==="result"&&!A.result) A.view="setup";
+  if(A.view==="drill"&&!a.drill) A.view="setup";
+  if(A.view==="run") renderAuditRun(); else if(A.view==="result") renderAuditResult(A.result); else if(A.view==="drill") renderAuditDrill(); else renderAuditSetup();
+  renderStat();
+}
+const auditLine=R=>`${R.s.length}/${R.rows.length} solid · ${R.k.length} shaky · ${R.f.length} forgotten`;
+function renderAuditSetup(){
+  const a=AU(), r=a.run, d=a.drill, n=WORDS.length, H=a.history;
+  let html=`<div class="card"><div class="prompt">🔎 Audit</div>
+    <div class="sub">Back after time away? One pass over <b>every word</b>, in random order: see it, think of the answer, tap Reveal, then say whether you knew it. How long you needed is the signal — <b>under 3 s</b> solid, <b>3–6 s</b> shaky, <b>over 6 s</b> forgotten.</div>`;
+  if(r) html+=`<div class="row"><button class="btn gold" id="aresume">Resume → <small style="font-weight:500;opacity:.8">${Math.min(r.i+1,r.order.length)} / ${r.order.length} · ${DIR_LABEL[r.dir]}</small></button></div>
+    <div class="row" style="margin-top:8px"><button class="link" id="askip">Skip to results</button><button class="link" id="arestart">✕ Start over</button></div>`;
+  else html+=`<div class="seg" id="adir" style="margin:16px 0 0">${["en","th"].map(x=>`<button data-d="${x}" class="${a.dir===x?'active':''}">${DIR_LABEL[x]}</button>`).join('')}</div>
+    <div class="row" style="margin-top:12px"><button class="btn gold" id="astart">Audit all ${n} words → <small style="font-weight:500;opacity:.8">about ${Math.max(1,Math.round(n*5/60))} min</small></button></div>
+    <div class="note" style="margin-top:12px;font-size:12.5px;color:var(--muted);line-height:1.5">${a.dir==="en"?'You see the Thai word and recall the meaning.':'You see the English and recall the Thai word.'} You can pause any time — progress is kept even if you close the tab.</div>`;
+  html+=`</div>`;
+  if(d){ const left=Object.keys(d.pool).filter(id=>BY_ID[id]).length;
+    html+=`<div class="panel"><h2>Drill${left?' in progress':' finished'}</h2><div class="note" style="font-size:13px;color:var(--muted);line-height:1.5">${left?`<b style="color:var(--cream)">${left}</b> of ${d.ids.length} lost words still in the pool.`:`All ${d.ids.length} words drilled back — re-audit them to confirm they stuck.`}</div>
+      <div class="row" style="margin-top:10px"><button class="btn ${r?'ghost':'gold'}" id="adrillgo">${left?'Continue drill →':'Finish up →'}</button></div>${left?`<div class="row" style="margin-top:6px"><button class="link" id="adrilldrop">✕ Discard drill</button></div>`:''}</div>`; }
+  if(a.boost.length) html+=`<div class="panel"><h2>Practice queue</h2><div class="note" style="font-size:13px;color:var(--muted);line-height:1.5"><b style="color:var(--cream)">${a.boost.length}</b> word${a.boost.length===1?'':'s'} from your audit ${a.boost.length===1?'is':'are'} at the top of Practice and the daily review until answered right there.</div>
+    <div class="row" style="margin-top:6px"><button class="link" id="aboostgo">Practise them →</button><button class="link" id="aboostclear">✕ Clear</button></div></div>`;
+  if(H.length) html+=`<div class="panel"><h2>History · ${H.length} audit${H.length===1?'':'s'}</h2>
+    ${H.map((rec,i)=>{ const R=auditStats(rec), pv=auditPrev(rec), d=pv?R.pct-auditStats(pv).pct:null;
+      return `<div class="qrow" data-h="${i}" style="cursor:pointer"><div class="k">🔎</div><div class="p"><b>${fmtDate(rec.date)}</b> <small>· ${DIR_LABEL[rec.dir]}${rec.scope==="recheck"?' · re-audit':''}${R.rows.length<rec.total?` · covered ${R.rows.length} of ${rec.total}`:''}</small><br><small>${auditLine(R)} · median ${fmtSec(R.med)}</small></div><div class="t">${deltaHtml(d,'%',true)}</div></div>`; }).reverse().join('')}
+    <div class="note" style="font-size:11.5px;color:var(--muted);margin-top:8px">Tap a run to open its report. Arrows compare the share of solid words with the previous audit in the same direction.</div></div>`;
+  stage().innerHTML=html;
+  const on=(id,f)=>{ const b=$(id); if(b) b.onclick=f; };
+  const ad=$('adir'); if(ad) ad.querySelectorAll('button').forEach(b=>b.onclick=()=>{ a.dir=b.dataset.d; save(); renderAudit(); });
+  on('astart',()=>auditStart(WORDS.map(w=>w.id),"all"));
+  on('aresume',auditResume);
+  on('askip',()=>{ if(A.confirm==='skip') auditFinish(); else { A.confirm='skip'; $('askip').textContent=`Tap again — report on the ${r.res.length} covered`; } });
+  on('arestart',()=>{ if(A.confirm==='restart'){ a.run=null; save(); renderAudit(); toast('Audit discarded'); } else { A.confirm='restart'; $('arestart').textContent='Tap again to discard'; } });
+  on('adrillgo',()=>{ A.dq=null; A.dphase="ask"; A.view="drill"; renderAudit(); });
+  on('adrilldrop',()=>{ if(A.confirm==='drop'){ a.drill=null; save(); renderAudit(); toast('Drill discarded'); } else { A.confirm='drop'; $('adrilldrop').textContent='Tap again to discard'; } });
+  on('aboostgo',()=>{ P.filter="Audit"; if(P.userSub==='shadow') P.userSub='type'; P.sub=P.userSub; resetQ(); setMode('practice'); });
+  on('aboostclear',()=>{ a.boost=[]; save(); renderAudit(); toast('Practice queue back to normal'); });
+  document.querySelectorAll('.qrow[data-h]').forEach(x=>x.onclick=()=>{ A.result=H[+x.dataset.h]; A.view="result"; renderAudit(); window.scrollTo({top:0}); });
+}
+function renderAuditRun(){
+  const a=AU(), r=a.run;
+  while(r.i<r.order.length && !BY_ID[r.order[r.i]]) r.i++;                    // word removed from the bank since the run started
+  if(r.i>=r.order.length) return auditFinish();
+  const w=BY_ID[r.order[r.i]], n=r.order.length, toEn=r.dir==="en", shown=r.pend!=null;
+  let html=`<div class="barlabel"><span>${r.scope==="recheck"?'Re-audit':'Audit'} · ${DIR_LABEL[r.dir]}</span><span><b style="color:var(--cream)">${r.i+1} / ${n}</b></span></div>
+    <div class="bar"><i style="width:${r.i/n*100}%"></i></div><div class="card pop">`;
+  html+=toEn?`<div class="prompt th">${esc(w.th)}</div><div class="rom" style="margin-top:4px">${esc(w.rom)}</div>`:`<div class="prompt">${esc(w.en)}</div>`;
+  if(!shown) html+=`<div class="sub">${toEn?'Think of the meaning':'Think of the Thai word'}, then reveal.</div><div class="abar"><i></i></div>
+    <div class="row"><button class="btn gold" id="areveal">Reveal</button></div>`;
+  else { const g=auditGrade([w.id,r.pend,1]);
+    html+=`<div class="verdict ${g==="s"?'ok':g==="k"?'close':'bad'}">
+        ${toEn?`<div class="answer">${esc(w.en)}</div>`:`<div class="thai">${esc(w.th)}</div><div class="rom">${esc(w.rom)}</div>`}
+        <div class="note">⏱ ${fmtSec(r.pend)} · ${g==="s"?'quick':g==="k"?'slow — shaky even if you knew it':'over 6 s — flagged as forgotten either way'}${noteOf(w.id)?`<br>📝 ${esc(noteOf(w.id))}`:''}</div></div>
+      <div class="row"><button class="btn miss" id="aforgot">Forgot</button><button class="btn got" id="aknew">Knew it</button></div>`; }
+  html+=`<div class="row" style="margin-top:10px">${r.res.length?`<button class="link" id="aundo">↩ Undo last</button>`:''}<button class="link" id="apause">⏸ Pause</button><button class="link" id="askip">Skip to results</button></div></div>`;
+  stage().innerHTML=html;
+  if(!shown && A.tid!==w.id){ A.tid=w.id; A.t0=performance.now(); }           // timer starts when the word appears, stops on Reveal
+  const on=(id,f)=>{ const b=$(id); if(b) b.onclick=f; };
+  on('areveal',()=>{ r.pend=Math.round(performance.now()-A.t0); save(); A.shownAt=performance.now(); renderAudit(); if(S.settings.autoplay) speak(w.th); });
+  const grade=knew=>{ if(performance.now()-A.shownAt<250) return;             // swallow a double-tap on Reveal
+    r.res.push([w.id,r.pend,knew?1:0]); r.pend=null; r.i++; A.tid=null; save(); if(navigator.vibrate) navigator.vibrate(10); renderAudit(); };
+  on('aknew',()=>grade(true)); on('aforgot',()=>grade(false));
+  on('aundo',()=>{ auditRequeue(r); const last=r.res.pop(); r.i--; r.pend=last[1]; A.tid=null; A.shownAt=0; save(); renderAudit(); });
+  on('apause',()=>{ auditPause(); renderAudit(); toast(`Paused at ${r.i+1} / ${n}`); });
+  on('askip',()=>{ if(A.confirm==='skip') auditFinish(); else { A.confirm='skip'; $('askip').textContent=`Tap again — report on the ${r.res.length} covered`; } });
+}
+function renderAuditResult(rec){
+  const R=auditStats(rec), n=R.rows.length, pv=auditPrev(rec), PR=pv?auditStats(pv):null, pg=PR?Object.fromEntries(PR.rows.map(x=>[x.id,x.g])):{};
+  const lost=R.lost.length, dMed=PR?Math.round((R.med-PR.med)/100)*100:0;
+  const slipped=R.rows.filter(x=>pg[x.id]==="s"&&x.g!=="s").length, back=R.rows.filter(x=>pg[x.id]&&pg[x.id]!=="s"&&x.g==="s").length;
+  const cap=t=>t[0].toUpperCase()+t.slice(1);
+  const item=x=>`<div class="item" data-say="${esc(x.w.th)}"><div class="thai">${esc(x.w.th)}</div><div class="en">${esc(x.w.en)}<small>Day ${x.w.day} · ${esc(x.w.cat)}${pg[x.id]&&pg[x.id]!==x.g?` · was ${AUDIT_G[pg[x.id]]}`:''}</small></div><div class="rom">${esc(x.w.rom)}<div class="at ${x.ms>AUDIT_FORGOT?'f':x.ms>=AUDIT_SLOW?'k':''}">${fmtSec(x.ms)}${x.knew?'':' · forgot'}</div></div></div>`;
+  const group=(g,icon,open)=>R[g].length?`<details class="dayref" ${open?'open':''}><summary><span>${icon} ${cap(AUDIT_G[g])} · ${R[g].length}</span></summary><div class="list">${R[g].map(item).join('')}</div></details>`:'';
+  const brk=(label,rows)=>{ const c=g=>rows.filter(x=>x.g===g).length, t=rows.length; return `<div class="mrow"><div class="n">${label}</div><div class="stack"><i class="s" style="width:${c('s')/t*100}%"></i><i class="l" style="width:${c('k')/t*100}%"></i><i class="w" style="width:${c('f')/t*100}%"></i></div><div class="c" style="width:70px">${c('s')}/${t} solid</div></div>`; };
+  const legend=`<div class="legend"><span><i style="background:var(--jade)"></i>solid</span><span><i style="background:var(--gold)"></i>shaky</span><span><i style="background:var(--clay)"></i>forgotten</span></div>`;
+  const days=[...new Set(R.rows.map(x=>x.w.day))].sort((x,y)=>x-y), cats=CATS().filter(c=>R.rows.some(x=>x.w.cat===c));
+  let html=`<div class="card pop"><div class="summary"><div class="big">${R.s.length} / ${n}</div>
+      <p><b style="color:var(--cream)">solid</b> · ${R.k.length} shaky · ${R.f.length} forgotten<br>median recall ${fmtSec(R.med)} · ${DIR_LABEL[rec.dir]} · ${fmtDate(rec.date)}${n<rec.total?`<br>covered ${n} of ${rec.total} words`:''}${rec.scope==="recheck"?'<br>re-audit of drilled words':''}
+      ${pv?`<br>vs ${fmtDate(pv.date)}: ${deltaHtml(R.pct-PR.pct,'%',true)} solid · <span class="delta ${dMed<0?'up':dMed>0?'down':'flat'}">${dMed===0?'=':(dMed>0?'▲ ':'▼ ')+fmtSec(Math.abs(dMed))}</span> median${slipped||back?`<br>${slipped} slipped since then · ${back} came back`:''}`:''}</p></div>
+    <div class="row">${lost?`<button class="btn gold" id="adrill">Drill the ${lost} I lost →</button>`:''}<button class="btn ${lost?'ghost':'gold'}" id="adone" ${lost?'style="flex:0 0 auto"':''}>Done</button></div>
+    ${lost?'':`<div class="note" style="margin-top:10px;font-size:12.5px;color:var(--muted)">Nothing lost 🎉 — every word you covered came back in under 3 s.</div>`}</div>
+    <div style="margin-top:10px">${group('f','🔴',true)}${group('k','🟡',true)}${group('s','🟢',false)}</div>
+    <div class="panel"><h2>By day batch</h2>${days.map(d=>brk('Day '+d,R.rows.filter(x=>x.w.day===d))).join('')}${legend}</div>
+    <div class="panel"><h2>By category</h2>${cats.map(c=>brk(esc(c),R.rows.filter(x=>x.w.cat===c))).join('')}${legend}
+      <div class="note" style="font-size:11.5px;color:var(--muted);margin-top:8px">Times are from the word appearing to Reveal. Tap a word to hear it.</div></div>`;
+  stage().innerHTML=html;
+  document.querySelectorAll('[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say));
+  const ad=$('adrill'); if(ad) ad.onclick=()=>drillStart(R.lost,rec.dir);
+  $('adone').onclick=()=>{ A.result=null; A.view="setup"; renderAudit(); };
+}
+// ---- drill: only the words the audit flagged. Each word cycles Thai→EN typed, EN→Thai typed and listening, and leaves
+//      the pool after DRILL_STREAK correct answers in a row. Answers are NOT recorded — no streak, no rescheduling.
+function drillStart(ids,dir){
+  const a=AU(); ids=ids.filter(id=>BY_ID[id]); if(!ids.length) return;
+  a.drill={ids,dir,pool:Object.fromEntries(ids.map(id=>[id,{s:0,o:Math.floor(Math.random()*3)}])),last:null,n:0,right:0};
+  a.boost=[...new Set([...ids,...a.boost])]; save();                           // …and they go to the top of the normal Practice queue
+  A.dq=null; A.dphase="ask"; A.view="drill"; renderAudit(); window.scrollTo({top:0}); toast(`${ids.length} word${ids.length===1?'':'s'} also pushed to the top of Practice`);
+}
+function drillPick(d){
+  const left=Object.keys(d.pool).filter(id=>BY_ID[id]); if(!left.length) return null;
+  const c=left.length>1?left.filter(id=>id!==d.last):left, id=c[Math.floor(Math.random()*c.length)], p=d.pool[id];
+  const types=hasThaiVoice()?DRILL_TYPES:DRILL_TYPES.slice(0,2);               // no Thai voice → no listening questions
+  return {id,type:types[(p.o+p.s)%types.length]};
+}
+function drillCheck(q,val){ // the lenient Practice matcher: tones, punctuation, articles, hyphens/spaces don't matter — plus apostrophes
+  const w=BY_ID[q.id]; if(q.type==="en2th") return checkThai(w,val)!=="bad";
+  const t=normEn(val).replace(/'/g,'');
+  return checkEn(w,val)!=="bad" || (!!t && enAlts(w).some(x=>x.replace(/'/g,'')===t)) || (q.type==="listen" && checkThai(w,val)!=="bad");
+}
+function drillSubmit(val){
+  const d=AU().drill, q=A.dq; if(!d||!q||A.dphase!=="ask") return; const p=d.pool[q.id], ok=drillCheck(q,val);
+  A.dtyped=val; A.dok=ok; A.dprev={...p}; d.n++; d.last=q.id;
+  if(ok){ d.right++; p.s++; if(p.s>=DRILL_STREAK) delete d.pool[q.id]; } else { p.s=0; p.o++; }
+  save(); A.dphase="done"; renderAudit(); if(navigator.vibrate) navigator.vibrate(ok?15:[30,40,30]);
+}
+function renderAuditDrill(){
+  const a=AU(), d=a.drill, total=d.ids.length, left=Object.keys(d.pool).filter(id=>BY_ID[id]);
+  const on=(id,f)=>{ const b=$(id); if(b) b.onclick=f; };
+  if(!left.length && A.dphase!=="done"){ // pool empty → finished
+    const pct=d.n?Math.round(d.right/d.n*100):0;
+    stage().innerHTML=`<div class="card pop"><div class="summary"><div class="big">✓ ${total}</div><p>word${total===1?'':'s'} drilled back — each one right ${DRILL_STREAK}× in a row.<br>${d.n} answers · ${pct}% right</p></div>
+      <div class="row"><button class="btn ghost" id="ddone" style="flex:0 0 auto">Done</button><button class="btn gold" id="dreaudit">Re-audit these ${total} word${total===1?'':'s'} →</button></div>
+      <div class="note" style="margin-top:12px;font-size:12.5px;color:var(--muted);line-height:1.5">A re-audit times them again, cold, to confirm they stuck. They also stay at the top of Practice until you answer each one right there.</div></div>`;
+    on('ddone',()=>{ a.drill=null; save(); A.view="setup"; renderAudit(); });
+    on('dreaudit',()=>{ if(a.run&&A.confirm!=='over'){ A.confirm='over'; $('dreaudit').textContent='Replaces your paused audit — tap again'; return; } a.drill=null; auditStart(d.ids,"recheck",d.dir); });
+    return;
+  }
+  if(!A.dq||(A.dphase==="ask"&&!d.pool[A.dq.id])){ A.dq=drillPick(d); A.dphase="ask"; }
+  const q=A.dq, w=BY_ID[q.id], steps=(total-left.length)*DRILL_STREAK+left.reduce((s,id)=>s+d.pool[id].s,0);
+  const form=(ph,th)=>`<form class="field" id="dform" autocomplete="off"><input id="dans" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="${ph}" ${th?'lang="th"':''}><button class="btn gold" type="submit" style="flex:0 0 auto;padding:14px 18px">Check</button></form>`;
+  let html=`<div class="barlabel"><span>Drill · ${DRILL_LABEL[q.type]}</span><span><b style="color:var(--cream)">${left.length}</b> of ${total} left</span></div>
+    <div class="bar jade"><i style="width:${steps/(total*DRILL_STREAK)*100}%"></i></div><div class="card pop">`;
+  html+=q.type==="th2en"?`<div class="prompt th">${esc(w.th)}</div><div class="rom" style="margin-top:4px">${esc(w.rom)}</div>`
+      :q.type==="en2th"?`<div class="prompt">${esc(w.en)}</div>`
+      :`<button class="listen big" id="dplay" aria-label="play">🔊</button>`;
+  if(A.dphase==="ask") html+=`<div class="sub">${q.type==="en2th"?'Type it in Thai — romanised or script, tones optional':q.type==="listen"?'Listen, then type what it means':'Type the meaning in English'}</div>
+      ${form(q.type==="en2th"?'your answer…':'meaning in English…',q.type!=="th2en")}
+      <div class="row" style="margin-top:10px"><button class="link" id="dshow">Show answer</button><button class="link" id="dleave">✕ Leave drill</button></div>`;
+  else { const s=d.pool[q.id]?d.pool[q.id].s:DRILL_STREAK;
+    html+=`<div class="verdict ${A.dok?'ok':'bad'}"><h3>${A.dok?'✓ Correct':'✗ Not quite'}</h3>
+        <div class="thai">${esc(w.th)}</div><div class="rom">${esc(w.rom)}</div>
+        <div class="note">${esc(w.en)}${A.dtyped?` · you typed “${esc(A.dtyped)}”`:''}${noteOf(w.id)?`<br>📝 ${esc(noteOf(w.id))}`:''}</div>
+        <div class="note" style="margin-top:8px"><span class="dots">${'●'.repeat(s)}${'○'.repeat(DRILL_STREAK-s)}</span> ${s>=DRILL_STREAK?'out of the pool ✓':A.dok?`${s} of ${DRILL_STREAK} in a row`:'back to zero'}</div></div>
+      <div class="row"><button class="listen" id="dsay">🔊</button>${A.dok?'':`<button class="btn got" id="dover">I was right</button>`}<button class="btn gold" id="dnext">Next →</button></div>`; }
+  html+=`</div>`;
+  stage().innerHTML=html;
+  const f=$('dform'); if(f){ f.onsubmit=e=>{ e.preventDefault(); drillSubmit($('dans').value); }; $('dans').focus({preventScroll:true}); if(q.type==="listen") setTimeout(()=>speak(w.th),150); }
+  else if(q.type!=="listen" && S.settings.autoplay) speak(w.th);
+  on('dplay',()=>speak(w.th)); on('dsay',()=>speak(w.th));
+  on('dshow',()=>drillSubmit(''));
+  on('dleave',()=>{ A.dq=null; A.view="setup"; renderAudit(); toast('Drill kept — continue any time'); });
+  on('dover',()=>{ const p=d.pool[q.id]; p.s=A.dprev.s+1; p.o=A.dprev.o; d.right++; if(p.s>=DRILL_STREAK) delete d.pool[q.id]; A.dok=true; save(); renderAudit(); });
+  on('dnext',()=>{ A.dq=null; A.dphase="ask"; renderAudit(); });
+}
+
+// ---------------------------------------------------------------------
 //  PROGRESS
 // ---------------------------------------------------------------------
 function renderProgress(){
@@ -1924,10 +2126,12 @@ const FOOT={
   learn:"Flip cards by tapping, swipe for next. Use the search to look up any word.",
   build:"Sentences are generated fresh from your word bank — endless variety, always translated. EN → Thai: Tiles = put the Thai words in order, Type it = write the whole sentence yourself. Thai → EN: read the Thai and give the English (tiles or typed; wording is forgiven). Patterns = learn the frame, swap the slot. Thai word order is mostly Subject–Verb–Object; question particles (ไหม) go at the end.",
   tones:"Thai has 5 tones — the same syllable with a different tone is a different word. Words you miss come up more often; “Missed” drills only those.",
+  audit:"One pass over every word after time away. The time from seeing a word to tapping Reveal is the signal: under 3 s solid, 3–6 s shaky, over 6 s forgotten. Keys: Space = reveal, K / → = knew it, F / ← = forgot. Audits and drills never touch your streak or review schedule.",
   test:"Readiness check: every word of a day, typed both ways, plus a few sentences — no hints, no audio, one shot, timed. Ends with a verdict: ready, almost, or not ready to add new words. Words that took you noticeably longer are flagged 🐢.",
   progress:"Progress is saved in this browser only. Export it to move to another device."
 };
 function setMode(m){
+  if(mode==="audit"&&m!=="audit") auditPause();
   mode=m; document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
   $('foot').textContent=FOOT[m]||"";
   render(); window.scrollTo({top:0});
@@ -1938,6 +2142,7 @@ function render(){
   else if(mode==="build") renderBuild();
   else if(mode==="tones") renderTones();
   else if(mode==="test") renderTest();
+  else if(mode==="audit") renderAudit();
   else renderProgress();
 }
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
@@ -1946,8 +2151,18 @@ document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>setMode(b.data
 document.addEventListener('keydown',e=>{
   if(e.key!=='Enter') return;
   if(document.activeElement && document.activeElement.tagName==='INPUT') return;
-  const n=$('next')||$('bnext')||$('pnext')||$('tnext'); if(n){ e.preventDefault(); n.click(); }
+  const n=$('next')||$('bnext')||$('pnext')||$('tnext')||$('dnext'); if(n){ e.preventDefault(); n.click(); }
 });
+
+// Audit keys: Space / Enter = reveal, K or → = knew it, F or ← = forgot
+document.addEventListener('keydown',e=>{
+  if(mode!=='audit'||e.metaKey||e.ctrlKey||e.altKey) return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  const k=e.key.toLowerCase(), id=(k===' '||k==='enter')?'areveal':(k==='k'||k==='arrowright')?'aknew':(k==='f'||k==='arrowleft')?'aforgot':null;
+  const b=id&&$(id); if(b){ e.preventDefault(); b.click(); }
+});
+// a word you could keep staring at while the tab is hidden is not a fair timing → pause the audit
+document.addEventListener('visibilitychange',()=>{ if(document.hidden&&mode==='audit'&&A.live){ const r=AU().run; if(r&&r.pend==null){ auditPause(); renderAudit(); } } });
 
 load(); setMode("today"); checkImportLink();
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
