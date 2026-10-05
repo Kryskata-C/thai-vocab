@@ -1823,15 +1823,14 @@ function renderTestResult(r){
 //  forgotten; for right answers the time from the word appearing to your
 //  first keystroke is the signal — under 3 s solid, 3–6 s shaky, over 6 s
 //  forgotten. Lenient matching, as in Practice. Results by day
-//  batch and category, then a drill on just the lost words: mixed typed +
-//  listening questions, a word leaves after 3 correct in a row. Nothing
+//  batch and category, then a drill on just the lost words, English → Thai,
+//  in rounds: right → out, wrong → asked again after the round. Nothing
 //  here touches the streak or the review schedule — lost words are only
 //  pushed to the top of Practice until you answer them right there.)
 // ---------------------------------------------------------------------
-const AUDIT_SLOW=3000, AUDIT_FORGOT=6000, DRILL_STREAK=3;
+const AUDIT_SLOW=3000, AUDIT_FORGOT=6000;
 const AUDIT_G={s:"solid",k:"shaky",f:"forgotten"};
-const DRILL_TYPES=["th2en","en2th","listen"], DRILL_LABEL={th2en:"Thai → EN",en2th:"EN → Thai",listen:"Listen 🔊"};
-let A={view:"setup",live:false,t0:0,tk:null,tid:null,last:null,result:null,confirm:null,dq:null,dphase:"ask",dok:false,dtyped:"",dprev:null};
+let A={view:"setup",live:false,t0:0,tk:null,tid:null,last:null,result:null,confirm:null,dq:null,dphase:"ask",dok:false,dtyped:""};
 // S.audit = {dir, run (the audit in progress — survives closing the tab), drill, history, boost (ids pushed to the top of Practice)}
 function AU(){ const a=S.audit||(S.audit={}); if(!Array.isArray(a.history)) a.history=[]; if(!Array.isArray(a.boost)) a.boost=[]; if(a.dir!=="th") a.dir="en"; a.run=a.run||null; a.drill=a.drill||null; return a; }
 const auditBoost=()=>AU().boost;
@@ -1943,68 +1942,84 @@ function renderAuditResult(rec){
   const ad=$('adrill'); if(ad) ad.onclick=()=>drillStart(R.lost,rec.dir);
   $('adone').onclick=()=>{ A.result=null; A.view="setup"; renderAudit(); };
 }
-// ---- drill: only the words the audit flagged. Each word cycles Thai→EN typed, EN→Thai typed and listening, and leaves
-//      the pool after DRILL_STREAK correct answers in a row. Answers are NOT recorded — no streak, no rescheduling.
+// ---- drill: only the words the audit flagged, always English → Thai (you see the English and type the Thai). It runs
+//      in rounds: every word still in the pool is asked once; right → it leaves the pool, wrong → it stays and comes back
+//      in the next round, after the whole round is through. Rounds repeat until nothing is left.
+//      Answers are NOT recorded — no streak, no rescheduling.
+//      a.drill = {ids, dir (of the audit it came from), pool {id:{…}} = words not yet answered right, queue (this round,
+//      in order), miss (wrong this round), round, last, n, right}. A drill saved before rounds existed has only ids/pool:
+//      drillRound() gives it a queue of everything still in its pool, so no stored word is dropped.
 function drillStart(ids,dir){
   const a=AU(); ids=ids.filter(id=>BY_ID[id]); if(!ids.length) return;
-  a.drill={ids,dir,pool:Object.fromEntries(ids.map(id=>[id,{s:0,o:Math.floor(Math.random()*3)}])),last:null,n:0,right:0};
+  a.drill={ids,dir,pool:Object.fromEntries(ids.map(id=>[id,{s:0,o:0}])),queue:shuffle(ids.slice()),miss:[],round:1,last:null,n:0,right:0};
   a.boost=[...new Set([...ids,...a.boost])]; save();                           // …and they go to the top of the normal Practice queue
   A.dq=null; A.dphase="ask"; A.view="drill"; renderAudit(); window.scrollTo({top:0}); toast(`${ids.length} word${ids.length===1?'':'s'} also pushed to the top of Practice`);
 }
-function drillPick(d){
-  const left=Object.keys(d.pool).filter(id=>BY_ID[id]); if(!left.length) return null;
-  const c=left.length>1?left.filter(id=>id!==d.last):left, id=c[Math.floor(Math.random()*c.length)], p=d.pool[id];
-  const types=hasThaiVoice()?DRILL_TYPES:DRILL_TYPES.slice(0,2);               // no Thai voice → no listening questions
-  return {id,type:types[(p.o+p.s)%types.length]};
+// make the drill's round state consistent with its pool; the pool is the truth and is never shrunk here
+function drillRound(d){
+  const left=Object.keys(d.pool).filter(id=>BY_ID[id]), inPool=id=>left.includes(id);
+  if(!d.round) d.round=1;
+  d.miss=[...new Set((Array.isArray(d.miss)?d.miss:[]).filter(inPool))];
+  const fresh=!Array.isArray(d.queue);
+  d.queue=[...new Set((fresh?[]:d.queue).filter(inPool))];
+  if(fresh || (!d.queue.length && !d.miss.length && left.length)) d.queue=shuffle(left.slice());   // old drill, or a pool word no list knows about
+  else { const stray=left.filter(id=>!d.queue.includes(id)&&!d.miss.includes(id)); if(stray.length) d.queue.push(...shuffle(stray)); }
+  return left;
 }
+function drillNextRound(d){ d.queue=shuffle(d.miss.slice()); d.miss=[]; d.round=(d.round||1)+1; save(); }
 function drillCheck(q,val){ // the lenient Practice matcher: tones, punctuation, articles, hyphens/spaces don't matter — plus apostrophes
   const w=BY_ID[q.id]; if(q.type==="en2th") return checkThai(w,val)!=="bad";
   const t=normEn(val).replace(/'/g,'');
   return checkEn(w,val)!=="bad" || (!!t && enAlts(w).some(x=>x.replace(/'/g,'')===t)) || (q.type==="listen" && checkThai(w,val)!=="bad");
 }
 function drillSubmit(val){
-  const d=AU().drill, q=A.dq; if(!d||!q||A.dphase!=="ask") return; const p=d.pool[q.id], ok=drillCheck(q,val);
-  A.dtyped=val; A.dok=ok; A.dprev={...p}; d.n++; d.last=q.id;
-  if(ok){ d.right++; p.s++; if(p.s>=DRILL_STREAK) delete d.pool[q.id]; } else { p.s=0; p.o++; }
+  const d=AU().drill, q=A.dq; if(!d||!q||A.dphase!=="ask") return; const ok=drillCheck(q,val);
+  A.dtyped=val; A.dok=ok; d.n++; d.last=q.id; d.queue=d.queue.filter(id=>id!==q.id);
+  if(ok){ d.right++; delete d.pool[q.id]; } else if(!d.miss.includes(q.id)) d.miss.push(q.id);
   save(); A.dphase="done"; renderAudit(); if(navigator.vibrate) navigator.vibrate(ok?15:[30,40,30]);
 }
 function renderAuditDrill(){
-  const a=AU(), d=a.drill, total=d.ids.length, left=Object.keys(d.pool).filter(id=>BY_ID[id]);
+  const a=AU(), d=a.drill, total=d.ids.length, left=drillRound(d);
   const on=(id,f)=>{ const b=$(id); if(b) b.onclick=f; };
   if(!left.length && A.dphase!=="done"){ // pool empty → finished
     const pct=d.n?Math.round(d.right/d.n*100):0;
-    stage().innerHTML=`<div class="card pop"><div class="summary"><div class="big">✓ ${total}</div><p>word${total===1?'':'s'} drilled back — each one right ${DRILL_STREAK}× in a row.<br>${d.n} answers · ${pct}% right</p></div>
+    stage().innerHTML=`<div class="card pop"><div class="summary"><div class="big">✓ ${total}</div><p>word${total===1?'':'s'} drilled back, English → Thai — each one answered right.<br>${d.n} answers · ${pct}% right · ${d.round} round${d.round===1?'':'s'}</p></div>
       <div class="row"><button class="btn ghost" id="ddone" style="flex:0 0 auto">Done</button><button class="btn gold" id="dreaudit">Re-audit these ${total} word${total===1?'':'s'} →</button></div>
       <div class="note" style="margin-top:12px;font-size:12.5px;color:var(--muted);line-height:1.5">A re-audit times them again, cold, to confirm they stuck. They also stay at the top of Practice until you answer each one right there.</div></div>`;
     on('ddone',()=>{ a.drill=null; save(); A.view="setup"; renderAudit(); });
     on('dreaudit',()=>{ if(a.run&&A.confirm!=='over'){ A.confirm='over'; $('dreaudit').textContent='Replaces your paused audit — tap again'; return; } a.drill=null; auditStart(d.ids,"recheck",d.dir); });
     return;
   }
-  if(!A.dq||(A.dphase==="ask"&&!d.pool[A.dq.id])){ A.dq=drillPick(d); A.dphase="ask"; }
-  const q=A.dq, w=BY_ID[q.id], steps=(total-left.length)*DRILL_STREAK+left.reduce((s,id)=>s+d.pool[id].s,0);
-  const form=(ph,th)=>`<form class="field" id="dform" autocomplete="off"><input id="dans" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="${ph}" ${th?'lang="th"':''}><button class="btn gold" type="submit" style="flex:0 0 auto;padding:14px 18px">Check</button></form>`;
-  let html=`<div class="barlabel"><span>Drill · ${DRILL_LABEL[q.type]}</span><span><b style="color:var(--cream)">${left.length}</b> of ${total} left</span></div>
-    <div class="bar jade"><i style="width:${steps/(total*DRILL_STREAK)*100}%"></i></div><div class="card pop">`;
-  html+=q.type==="th2en"?`<div class="prompt th">${esc(w.th)}</div><div class="rom" style="margin-top:4px">${esc(w.rom)}</div>`
-      :q.type==="en2th"?`<div class="prompt">${esc(w.en)}</div>`
-      :`<button class="listen big" id="dplay" aria-label="play">🔊</button>`;
-  if(A.dphase==="ask") html+=`<div class="sub">${q.type==="en2th"?'Type it in Thai — romanised or script, tones optional':q.type==="listen"?'Listen, then type what it means':'Type the meaning in English'}</div>
-      ${form(q.type==="en2th"?'your answer…':'meaning in English…',q.type!=="th2en")}
+  if(!d.queue.length && A.dphase!=="done"){ // the round is through → the words still wrong, and another round on just those
+    const m=d.miss.map(id=>BY_ID[id]), k=m.length;
+    stage().innerHTML=`<div class="card pop"><div class="summary"><div class="big">${k} still wrong</div><p>Round ${d.round} done · <b style="color:var(--cream)">${total-left.length}</b> of ${total} drilled back so far.<br>These ${k===1?'one comes':k+' come'} round again, English → Thai.</p></div>
+      <div class="row"><button class="btn ghost" id="dleave" style="flex:0 0 auto">Later</button><button class="btn gold" id="dagain">Drill ${k===1?'it':'the '+k} again →</button></div></div>
+      <div class="list" style="margin-top:10px">${m.map(w=>`<div class="item" data-say="${esc(w.th)}"><div class="thai">${esc(w.th)}</div><div class="en">${esc(w.en)}</div><div class="rom">${esc(w.rom)}</div></div>`).join('')}</div>`;
+    document.querySelectorAll('[data-say]').forEach(it=>it.onclick=()=>speak(it.dataset.say));
+    on('dagain',()=>{ drillNextRound(d); A.dq=null; A.dphase="ask"; renderAudit(); window.scrollTo({top:0}); });
+    on('dleave',()=>{ A.dq=null; A.view="setup"; renderAudit(); toast('Drill kept — continue any time'); });
+    return;
+  }
+  if(A.dphase==="ask"&&(!A.dq||A.dq.id!==d.queue[0])) A.dq={id:d.queue[0],type:"en2th"};
+  const q=A.dq, w=BY_ID[q.id], rn=d.queue.length+d.miss.length+(A.dphase==="done"&&A.dok?1:0), at=rn-d.queue.length;   // rn = words in this round
+  let html=`<div class="barlabel"><span>Drill · EN → Thai · round ${d.round}</span><span><b style="color:var(--cream)">${left.length}</b> of ${total} left</span></div>
+    <div class="bar jade"><i style="width:${rn?at/rn*100:0}%"></i></div><div class="card pop"><div class="prompt">${esc(w.en)}</div>`;
+  if(A.dphase==="ask") html+=`<div class="sub">Type it in Thai — romanised or script, tones optional</div>
+      <form class="field" id="dform" autocomplete="off"><input id="dans" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="your answer…" lang="th"><button class="btn gold" type="submit" style="flex:0 0 auto;padding:14px 18px">Check</button></form>
       <div class="row" style="margin-top:10px"><button class="link" id="dshow">Show answer</button><button class="link" id="dleave">✕ Leave drill</button></div>`;
-  else { const s=d.pool[q.id]?d.pool[q.id].s:DRILL_STREAK;
-    html+=`<div class="verdict ${A.dok?'ok':'bad'}"><h3>${A.dok?'✓ Correct':'✗ Not quite'}</h3>
+  else html+=`<div class="verdict ${A.dok?'ok':'bad'}"><h3>${A.dok?'✓ Correct':'✗ Not quite'}</h3>
         <div class="thai">${esc(w.th)}</div><div class="rom">${esc(w.rom)}</div>
         <div class="note">${esc(w.en)}${A.dtyped?` · you typed “${esc(A.dtyped)}”`:''}${noteOf(w.id)?`<br>📝 ${esc(noteOf(w.id))}`:''}</div>
-        <div class="note" style="margin-top:8px"><span class="dots">${'●'.repeat(s)}${'○'.repeat(DRILL_STREAK-s)}</span> ${s>=DRILL_STREAK?'out of the pool ✓':A.dok?`${s} of ${DRILL_STREAK} in a row`:'back to zero'}</div></div>
-      <div class="row"><button class="listen" id="dsay">🔊</button>${A.dok?'':`<button class="btn got" id="dover">I was right</button>`}<button class="btn gold" id="dnext">Next →</button></div>`; }
+        <div class="note" style="margin-top:8px">${A.dok?'out of the pool ✓':'comes back after this round'} · ${d.queue.length} to go in round ${d.round}</div></div>
+      <div class="row"><button class="listen" id="dsay">🔊</button>${A.dok?'':`<button class="btn got" id="dover">I was right</button>`}<button class="btn gold" id="dnext">Next →</button></div>`;
   html+=`</div>`;
   stage().innerHTML=html;
-  const f=$('dform'); if(f){ f.onsubmit=e=>{ e.preventDefault(); drillSubmit($('dans').value); }; $('dans').focus({preventScroll:true}); if(q.type==="listen") setTimeout(()=>speak(w.th),150); }
-  else if(q.type!=="listen" && S.settings.autoplay) speak(w.th);
-  on('dplay',()=>speak(w.th)); on('dsay',()=>speak(w.th));
+  const f=$('dform'); if(f){ f.onsubmit=e=>{ e.preventDefault(); drillSubmit($('dans').value); }; $('dans').focus({preventScroll:true}); }
+  else if(S.settings.autoplay) speak(w.th);
+  on('dsay',()=>speak(w.th));
   on('dshow',()=>drillSubmit(''));
   on('dleave',()=>{ A.dq=null; A.view="setup"; renderAudit(); toast('Drill kept — continue any time'); });
-  on('dover',()=>{ const p=d.pool[q.id]; p.s=A.dprev.s+1; p.o=A.dprev.o; d.right++; if(p.s>=DRILL_STREAK) delete d.pool[q.id]; A.dok=true; save(); renderAudit(); });
+  on('dover',()=>{ d.miss=d.miss.filter(id=>id!==q.id); delete d.pool[q.id]; d.right++; A.dok=true; save(); renderAudit(); });   // matcher was too strict → the word leaves the pool
   on('dnext',()=>{ A.dq=null; A.dphase="ask"; renderAudit(); });
 }
 
