@@ -402,6 +402,16 @@ const WORDS = [
   {id:"noon",th:"นอน",rom:"nɔɔn (norn)",en:"sleep",alt:["sleeping","go to bed","lie down"],tone:"mid",day:13,cat:"Verbs",g:{pos:"v",en:"sleep",obj:[],asp:"any",maak:1}},
   {id:"nuai",th:"เหนื่อย",rom:"nʉ̀ai (neuai / nuai)",en:"tired",alt:["exhausted","sleepy"],tone:"low",day:13,cat:"Describe",g:{pos:"adj",en:"tired",of:["person"]}}, // adjective — no bpen: phǒm nʉ̀ai
   {id:"dek",th:"เด็ก",rom:"dèk",en:"child",alt:["kid","kids","children","baby"],tone:"low",day:13,cat:"People",g:{pos:"n",cls:["person"],a:"a child",the:"the child"}},
+  // Day 14 — help, look for, wait, closed / open, far, pay, it's fine, too
+  {id:"chuay",th:"ช่วย",rom:"chûay",en:"help",alt:["assist","help me","please help"],tone:"falling",day:14,cat:"Verbs",g:{pos:"v",en:"help",obj:["person"],asp:"any",nowh:1}}, // chûay dûai! = help!; chûay + verb = please (do it for me)
+  {id:"haa_look",th:"หา",rom:"hǎa",en:"look for",alt:["search","search for","find","seek","looking for"],tone:"rising",day:14,cat:"Verbs",g:{pos:"v",en:"look",t:"look for",obj:["thing","person"],asp:"any",needObj:1}}, // needObj: hǎa always looks for something. Rising — hâa (falling) = five
+  {id:"roo",th:"รอ",rom:"rɔɔ (ror)",en:"wait",alt:["wait for","hold on","waiting"],tone:"mid",day:14,cat:"Verbs",g:{pos:"v",en:"wait",t:"wait for",obj:["person"],asp:"any",at:1}}, // rɔɔ phǒm = wait for me — no word for 'for'
+  {id:"bpit",th:"ปิด",rom:"bpìt",en:"closed",alt:["close","shut","to close","turn off","off"],tone:"low",day:14,cat:"Describe",g:{pos:"adj",en:"closed",of:["place"],abs:1}}, // also the verb: bpìt ráan = close the shop
+  {id:"bpoet",th:"เปิด",rom:"bpə̀ət (bpert / bpeut)",en:"open",alt:["opened","to open","turn on","on"],tone:"low",day:14,cat:"Describe",g:{pos:"adj",en:"open",of:["place"],abs:1}}, // opposite of bpìt; ráan bpə̀ət mǎi? = is the shop open?
+  {id:"glai",th:"ไกล",rom:"glai",en:"far",alt:["far away","distant"],tone:"mid",day:14,cat:"Describe",g:{pos:"adj",en:"far",of:["place"]}}, // mid tone — glâi (falling) is the opposite: near
+  {id:"jaai",th:"จ่าย",rom:"jàai",en:"pay",alt:["to pay","pay for","paying"],tone:"low",day:14,cat:"Verbs",g:{pos:"v",en:"pay",obj:[],asp:"any",at:1}}, // jàai ngern = pay (money)
+  {id:"maibpenrai",th:"ไม่เป็นไร",rom:"mâi bpen rai",en:"it's fine",alt:["its fine","no problem","never mind","nevermind","no worries","it's ok","its ok","it's okay","its okay","that's ok","thats ok","it doesn't matter","doesn't matter","you're welcome","youre welcome","don't worry","dont worry","all good"],tone:"falling+mid+mid",day:14,cat:"Polite"}, // mâi (not) + bpen (be) + rai (anything) — the all-purpose reply
+  {id:"duai",th:"ด้วย",rom:"dûai",en:"too",alt:["also","as well","together"],tone:"falling",day:14,cat:"Glue"}, // goes at the END: phǒm bpai dûai = I'm going too
 ];
 const BY_ID = Object.fromEntries(WORDS.map(w=>[w.id,w]));
 
@@ -439,6 +449,8 @@ const PATTERNS = [
    fills:[{id:"bpai",en:"I have to go."},{id:"gin",en:"I have to eat."},{id:"phuut",en:"I have to speak."},{id:"tam",en:"I have to do it."}]},
   {id:"timeword",name:"[time] phǒm bpai bâan",gloss:"Time words sit at the FRONT — no tense endings, the time word does all the work",ids:["_","phom","bpai","baan"],
    fills:[{id:"wannii",en:"Today I'm going home."},{id:"dtoonchao",en:"In the morning I go home."},{id:"dtoonyen",en:"In the evening I go home."},{id:"phrungnii",en:"Tomorrow I'm going home."},{id:"meuawaan",en:"Yesterday I went home."}]},
+  {id:"duai",name:"phǒm [verb] dûai",gloss:"I [verb] too  — dûai goes at the END",ids:["phom","_","duai"],
+   fills:[{id:"bpai",en:"I'm going too."},{id:"gin",en:"I'm eating too."},{id:"maa",en:"I'm coming too."},{id:"ao",en:"I want it too."},{id:"roo",en:"I'm waiting too."}]},
   {id:"nii",name:"nîi [X]",gloss:"This is [X]  — no word for 'is' with adjectives",ids:["nii","_"],
    fills:[{id:"aroi",en:"This is delicious."},{id:"phet",en:"This is spicy."},{id:"suay",en:"This is beautiful."},{id:"khao_rice",en:"This is rice."},{id:"naam",en:"This is water."}]},
   {id:"chorp",name:"phǒm chôrp [X]",gloss:"I like [X]",ids:["phom","chorp","_"],
@@ -533,7 +545,7 @@ function speak(t){
 // =====================================================================
 function skeleton(s){
   s=(s||"").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  s=s.replace(/ʉ/g,'ue').replace(/ɛ/g,'ae').replace(/ɔ/g,'o').replace(/ə/g,'oe').replace(/œ/g,'oe');
+  s=s.replace(/ʉ/g,'ue').replace(/ɛ/g,'ae').replace(/ɔ/g,'o').replace(/ə+/g,'oe').replace(/œ/g,'oe');
   s=s.replace(/[^a-z]/g,'');
   s=s.replace(/kh/g,'k').replace(/ph/g,'p').replace(/th/g,'t').replace(/bp/g,'p').replace(/dt/g,'t').replace(/ch/g,'c').replace(/ck/g,'k').replace(/j/g,'c');
   s=s.replace(/g/g,'k').replace(/b/g,'p').replace(/d/g,'t');
@@ -998,9 +1010,9 @@ const DESTS=dir=>[...POS('loc').filter(l=>dir==='away'?!G(l).prox:dir==='toward'
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 function enS3(v){ const [h,...r]=v.split(' '); let f; if(h==='have') f='has'; else if(h==='do') f='does'; else if(/(s|sh|ch|x|z|o)$/.test(h)) f=h+'es'; else if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ies'; else f=h+'s'; return [f,...r].join(' '); }
 function enIng(v){ const [h,...r]=v.split(' '); let f; if(/ie$/.test(h)) f=h.slice(0,-2)+'ying'; else if(/[^e]e$/.test(h)) f=h.slice(0,-1)+'ing'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ing'; else f=h+'ing'; return [f,...r].join(' '); }
-function enPP(v){ const [h,...r]=v.split(' '); const IR={eat:'eaten',drink:'drunk',go:'gone',come:'come',see:'seen',know:'known',have:'had',take:'taken',get:'got',buy:'bought',say:'said',speak:'spoken',tell:'told',look:'looked',make:'made',do:'done',sleep:'slept',think:'thought'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); }
-function enPast(v){ const [h,...r]=v.split(' '); const IR={eat:'ate',drink:'drank',go:'went',come:'came',see:'saw',know:'knew',have:'had',take:'took',get:'got',buy:'bought',say:'said',speak:'spoke',tell:'told',make:'made',do:'did',think:'thought',sleep:'slept'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); } // simple past for mʉ̂a-waan sentences
-function enCmp(a){ const IR={good:'better',hot:'hotter',big:'bigger'}; if(IR[a]) return IR[a]; if(/[^aeiou]y$/.test(a)) return a.slice(0,-1)+'ier';
+function enPP(v){ const [h,...r]=v.split(' '); const IR={eat:'eaten',drink:'drunk',go:'gone',come:'come',see:'seen',know:'known',have:'had',take:'taken',get:'got',buy:'bought',say:'said',speak:'spoken',tell:'told',look:'looked',make:'made',do:'done',sleep:'slept',think:'thought',pay:'paid'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); }
+function enPast(v){ const [h,...r]=v.split(' '); const IR={eat:'ate',drink:'drank',go:'went',come:'came',see:'saw',know:'knew',have:'had',take:'took',get:'got',buy:'bought',say:'said',speak:'spoke',tell:'told',make:'made',do:'did',think:'thought',sleep:'slept',pay:'paid'}; let f=IR[h]; if(!f){ if(/[^aeiou]y$/.test(h)) f=h.slice(0,-1)+'ied'; else if(/e$/.test(h)) f=h+'d'; else if(/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(h)) f=h+h.slice(-1)+'ed'; else f=h+'ed'; } return [f,...r].join(' '); } // simple past for mʉ̂a-waan sentences
+function enCmp(a){ const IR={good:'better',hot:'hotter',big:'bigger',far:'farther'}; if(IR[a]) return IR[a]; if(/[^aeiou]y$/.test(a)) return a.slice(0,-1)+'ier';
   if(a.length<=5&&!/ /.test(a)) return (/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(a)?a+a.slice(-1):a)+(/e$/.test(a)?'r':'er'); return 'more '+a; } // cheap→cheaper, big→bigger, spicy→spicier, expensive→more expensive
 const CONTR={I:"I'm",you:"you're",he:"he's",she:"she's",we:"we're",they:"they're",it:"it's"};
 const contr=sb=>CONTR[sb.s]||`${sb.s} ${sb.be}`;
@@ -1221,7 +1233,7 @@ const FRAMES=[
     if(r<.75) return {ids:['yut',v.id],en:cap(`stop ${enIng(G(v).en)}!`),req:true,tip:TIP.yut};
     if(!has('khun')||!has('dai')||!has('mai_q')) return null;
     return {ids:['khun','yut',v.id,'dai','mai_q'],en:cap(`can you stop ${enIng(G(v).en)}?`),tip:TIP.yut}; }},
-  {id:'than',w:2.5,gen(){ if(!has('gwaa')) return null; const a=pk(POS('adj')); if(!a) return null; const g=G(a); if(!g.of.some(c=>c!=='person')) return null;
+  {id:'than',w:2.5,gen(){ if(!has('gwaa')) return null; const a=pk(POS('adj').filter(x=>!G(x).abs)); if(!a) return null; const g=G(a); if(!g.of.some(c=>c!=='person')) return null;
     const subs=[...POS('dem'),...POS('n').filter(n=>!G(n).noPrice&&G(n).cls.some(c=>g.of.includes(c)&&c!=='person'))];
     const w=pk(subs); if(!w) return null; const sb=subjOf(w), cmp=enCmp(g.en);
     if(chance(.25)) return {ids:[w.id,a.id,'gwaa','mai_q'],en:cap(`${sb.be} ${sb.s} ${cmp}?`),tip:TIP.gwaa};
@@ -1271,7 +1283,7 @@ const FRAMES=[
   {id:'adj',w:4,gen(){ const a=pk(POS('adj')); if(!a) return null; const g=G(a);
     const subs=[...(g.of.some(c=>c!=='person')?POS('dem'):[]),...POS('n').filter(n=>!G(n).noPrice&&G(n).cls.some(c=>g.of.includes(c))),...(g.of.includes('person')?PRONS().filter(p=>G(p).n!==1):[])];
     const w=pk(subs); if(!w) return null; let sb=subjOf(w), sj=[w.id]; const dem=G(w).pos==='dem', r=Math.random();
-    const deg=chance(.4)?(has('nitnoi')&&chance(.3)?'nitnoi':has('jing')&&chance(.3)?'jing':has('maak')?'maak':null):null; // very / a little / really-really [adj]
+    const deg=!g.abs&&chance(.4)?(has('nitnoi')&&chance(.3)?'nitnoi':has('jing')&&chance(.3)?'jing':has('maak')?'maak':null):null; // very / a little / really-really [adj]
     if(G(w).pos==='n'&&chance(.35)){ const d=pk(POS('dem').filter(x=>!G(x).an)); if(d){ sj=[w.id,d.id]; sb={...sb,s:`${G(d).en} ${G(w).the.replace(/^the /,'')}`}; } } // rót nîi = this car (noun first, then nîi/nân)
     const chg=!dem&&G(w).pos==='n'&&G(w).cls.some(c=>c==='food'||c==='drink'); // only food/drink quality changes day to day
     const V={be:1,rest:(deg==='maak'?'very ':deg==='nitnoi'?'a little ':deg==='jing'?'really ':'')+g.en,dyn:chg};
@@ -1454,7 +1466,7 @@ function matchSentence(ids,input,strict){
 const EN_PHRASES=[[/\bi'?d like\b/g,'i want'],[/\bwould like\b/g,'want'],[/\b(?:can|could|may) i (?:have|get)\b/g,'may i have'],[/\bgive me\b/g,'may i have'],[/\bexcuse me\b/g,'sorry'],
   [/\b(said|says|say|know|knows|knew|think|thinks|thought|told|tells|tell)\s+that\b/g,'$1'],[/\ba little bit\b/g,'abit'],[/\ba little\b/g,'abit'],[/\ba bit\b/g,'abit'],[/\bslightly\b/g,'abit'],[/\bpull over\b/g,'stop'],[/\bthank you\b/g,'thanks'],[/\bthanks a lot\b/g,'thanks very'],[/\bthank you very much\b/g,'thanks very'],[/\ba lot\b/g,'very'],[/\bso much\b/g,'very'],[/\breally\b/g,'very'],[/\bso\b/g,'very'],
   [/\bwanna\b/g,'want to'],[/\bgonna\b/g,'going to'],[/\bwant to\b/g,'want'],[/\bwould you like\b/g,'want'],[/\bdo you want\b/g,'want'],[/\bdon'?t want\b/g,'not want'],[/\bno thanks\b/g,'not want'],[/\bthere is\b/g,'have'],[/\bthere are\b/g,'have'],[/\bthere'?s\b/g,'have'],[/\bis there\b/g,'have'],[/\bare there\b/g,'have']];
-const EN_IRR={am:'be',is:'be',are:'be',was:'be',were:'be',has:'have',had:'have',does:'do',did:'do',goes:'go',went:'go',gone:'go',ate:'eat',eaten:'eat',drank:'drink',drunk:'drink',came:'come',saw:'see',seen:'see',knew:'know',known:'know',took:'take',taken:'take',bought:'buy',got:'get',said:'say',told:'tell',spoke:'speak',spoken:'speak',made:'make',done:'do',slept:'sleep',thought:'think',children:'child',kids:'kid',people:'person',men:'man',no:'not',could:'can',may:'can',me:'i',my:'i',him:'he',her:'she',us:'we',them:'they',nope:'not'};
+const EN_IRR={am:'be',is:'be',are:'be',was:'be',were:'be',has:'have',had:'have',does:'do',did:'do',goes:'go',went:'go',gone:'go',ate:'eat',eaten:'eat',drank:'drink',drunk:'drink',came:'come',saw:'see',seen:'see',knew:'know',known:'know',took:'take',taken:'take',bought:'buy',got:'get',said:'say',told:'tell',spoke:'speak',spoken:'speak',made:'make',done:'do',slept:'sleep',thought:'think',paid:'pay',children:'child',kids:'kid',people:'person',men:'man',no:'not',could:'can',may:'can',me:'i',my:'i',him:'he',her:'she',us:'we',them:'they',nope:'not'};
 const EN_STOP=new Set(['a','an','the','to','be','do','it','please','yes','ok','okay','hey','oh','and','of','at','in','on','some','any']);
 function enStem(t){ t=EN_IRR[t]||t; if(t.length>4&&/ing$/.test(t)) t=t.slice(0,-3); else if(t.length>4&&/ed$/.test(t)) t=t.slice(0,-2); else if(t.length>3&&/ies$/.test(t)) t=t.slice(0,-3)+'y';
   else if(t.length>3&&/(s|sh|ch|x|z|o)es$/.test(t)) t=t.slice(0,-2); else if(t.length>3&&/[^s]s$/.test(t)) t=t.slice(0,-1); if(t.length>3&&/e$/.test(t)) t=t.slice(0,-1); return t; }
