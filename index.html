@@ -697,12 +697,12 @@ function speak(t){
 function skeleton(s){
   s=(s||"").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   s=s.replace(/ʉ/g,'ue').replace(/ɛ/g,'ae').replace(/ɔ/g,'o').replace(/ə+/g,'oe').replace(/œ/g,'oe');
-  s=s.replace(/[^a-z]/g,'');
+  s=s.replace(/[\s\-]+/g,'|').replace(/[^a-z|]/g,'');                   // keep word/syllable breaks as | so "yàak hǎa" is not read as "yaa-khaa" (kh), "rao wan" not as "ra-ow-an"
   s=s.replace(/kh/g,'k').replace(/ph/g,'p').replace(/th/g,'t').replace(/bp/g,'p').replace(/dt/g,'t').replace(/ch/g,'c').replace(/ck/g,'k').replace(/j/g,'c');
   s=s.replace(/g/g,'k').replace(/b/g,'p').replace(/d/g,'t');
   s=s.replace(/ar(?![aeiou])/g,'a').replace(/or(?![aeiou])/g,'o').replace(/er(?![aeiou])/g,'e').replace(/aw(?![aeiou])/g,'o').replace(/oe/g,'e')
      .replace(/eu/g,'u').replace(/ue/g,'u').replace(/ow/g,'ao').replace(/au/g,'ao').replace(/ay/g,'ai').replace(/ee/g,'i').replace(/oo/g,'u');
-  s=s.replace(/(.)\1+/g,'$1');
+  s=s.replace(/\|/g,'').replace(/(.)\1+/g,'$1');                        // breaks dropped last: doubled letters still collapse across them ("wan-níi" → "wani")
   return s;
 }
 function lev(a,b){
@@ -714,6 +714,8 @@ function lev(a,b){
 function romAlts(w){ // "rʉ̌ʉ (reu)" -> ["rʉ̌ʉ","reu"]
   return w.rom.split(/[()/]/).map(x=>x.trim()).filter(Boolean);
 }
+// every accepted skeleton of a word: each spelling, with and without its hyphens ("phrɔ́-wâa" is typed both "phro-waa" and "phrowaa")
+function romSkels(w){ const alts=romAlts(w); if(!alts.length) alts.push(w.rom); return [...new Set(alts.flatMap(r=>[skeleton(r),skeleton(r.replace(/-/g,''))]).filter(Boolean))]; }
 // sequence of tone marks in a romanised string, e.g. "hông-náam" -> "^'"  (mid tone has no mark)
 function toneSig(s){ return (s||"").normalize('NFD').replace(/[^\u0300\u0301\u0302\u030C]/g,'').replace(/\u0300/g,'`').replace(/\u0301/g,"'").replace(/\u0302/g,'^').replace(/\u030C/g,'v'); }
 let lastToneMiss=false;
@@ -723,7 +725,7 @@ function checkThai(w,input){
   const raw=(input||"").trim(); if(!raw) return "bad";
   if(raw.normalize('NFC')===w.th.normalize('NFC')) return "ok";
   const typed=skeleton(raw); if(!typed) return "bad";
-  const targets=[...romAlts(w),w.rom].map(skeleton);
+  const targets=romSkels(w);
   if(targets.includes(typed)){
     if(S.settings.hard){ const sig=toneSig(raw); if(!romAlts(w).some(r=>toneSig(r)===sig)){ lastToneMiss=true; return "close"; } }
     return "ok";
@@ -754,14 +756,14 @@ function checkEn(w,input){
 // ---- STRICT matching for the Test tab. Missing tone marks are still fine, but a near-miss that is (or is closer to)
 //      a different word in the bank is wrong, and typed tone marks that point at a different word are wrong too.
 let SKEL_MAP=null, EN_MAP=null;
-function skelMap(){ if(SKEL_MAP) return SKEL_MAP; const m={}; WORDS.forEach(w=>[...romAlts(w),w.rom].map(skeleton).forEach(k=>{ if(!k) return; (m[k]=m[k]||new Set()).add(w.id); })); return SKEL_MAP=m; }
+function skelMap(){ if(SKEL_MAP) return SKEL_MAP; const m={}; WORDS.forEach(w=>romSkels(w).forEach(k=>{ if(!k) return; (m[k]=m[k]||new Set()).add(w.id); })); return SKEL_MAP=m; }
 function enMap(){ if(EN_MAP) return EN_MAP; const m={}; WORDS.forEach(w=>enAlts(w).forEach(a=>{ (m[a]=m[a]||new Set()).add(w.id); })); return EN_MAP=m; }
 function checkThaiStrict(w,input){
   const raw=(input||"").trim(); if(!raw) return false;
   if(raw.normalize('NFC')===w.th.normalize('NFC')) return true;
   if(/[฀-๿]/.test(raw)) return false;                                   // Thai script, but not this word
   const typed=skeleton(raw); if(!typed) return false;
-  const targets=[...new Set([...romAlts(w),w.rom].map(skeleton).filter(Boolean))], M=skelMap();
+  const targets=romSkels(w), M=skelMap();
   if(targets.includes(typed)){
     const sig=toneSig(raw); if(!sig) return true;                       // no tone marks typed → accepted
     if(romAlts(w).some(r=>toneSig(r)===sig)) return true;              // right tone marks
@@ -1632,7 +1634,7 @@ function matchSentence(ids,input,strict){
   }
   let rem=skeleton(raw); const marks=[]; let prev=""; // prev = last skeleton letter of the previous word
   for(const id of ids){
-    const w=BY_ID[id]; const cands=[...new Set([...romAlts(w),w.rom].map(skeleton).filter(Boolean))].sort((a,b)=>b.length-a.length);
+    const w=BY_ID[id]; const cands=romSkels(w).sort((a,b)=>b.length-a.length); // never the raw "rɔɔ (ror)" string: its glued skeleton "ruro" would swallow the next word
     let hit=null;
     for(let k=0;k<=Math.min(10,rem.length) && !hit;k++){ // allow some junk before the word
       for(const c of cands){ // pass 1: exact hits only — a long fuzzy candidate must never swallow the start of the next word
